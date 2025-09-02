@@ -1,15 +1,11 @@
-# Zen Browser Debian Package Builder
+# Debian Package Builder Scripts
 
-This repository provides an automated script to build Debian packages for the [Zen Browser](https://zen-browser.app/), a privacy-focused web browser.
+This repository provides automated scripts to build Debian packages for:
 
-The main script, `get_zen_deb.sh`, combines GitHub release fetching and deb package creation into a single automated process.
+- [Zen Browser](https://zen-browser.app/) – privacy-focused web browser
+- [Zed Editor](https://zed.dev/) – high-performance, multiplayer code editor
 
-## Features
-
-- Fetches the latest Zen Browser release from GitHub
-- Automatically determines the version number
-- Downloads the official tarball
-- Builds a Debian package (.deb) ready for installation
+Each script fetches the latest release from GitHub and builds a .deb that integrates with desktop environments (icons, desktop entries, and executables on PATH).
 
 ## Requirements
 
@@ -23,31 +19,40 @@ The main script, `get_zen_deb.sh`, combines GitHub release fetching and deb pack
 1. Clone this repository:
 
    ```bash
-   git clone https://github.com/sh4r10/zen-browser-debian.git && cd zen-browser-debian
+   git clone https://github.com/TheCrazyGM/get-zen-debian.git && cd get-zen-debian
    ```
 
-2. Run the script:
+2. Build Zen Browser .deb:
 
    ```bash
-   ./get_zen_deb.sh
+   bash zen_browser.sh
    ```
 
-3. The script will:
+3. Build Zed Editor .deb:
+
+   ```bash
+   bash zed_editor.sh
+   ```
+
+4. What the scripts do:
    - Check for required dependencies
-   - Fetch the latest release from zen-browser/desktop
-   - Download the tarball
-   - Build the Debian package
+   - Fetch the latest release from GitHub
+   - Download the official tarball
+   - Build the Debian package (.deb)
 
-4. Install the generated .deb file:
+5. Install the generated .deb files:
 
    ```bash
-   dpkg -i zen-browser_VERSION.deb
+   sudo dpkg -i zen-browser_<version>.deb
+   sudo dpkg -i zed-editor_<version>.deb
    ```
 
 ## Output
 
-The script produces a file named `zen-browser_VERSION.deb` in the current directory, where VERSION is the latest release tag.
+- Zen: `zen-browser_<version>.deb`
+- Zed: `zed-editor_<version>.deb`
 
 ## Notes
 
-- The script handles cleanup automatically, removing temporary files on completion or failure.
+- Scripts handle cleanup automatically, removing temporary files on completion or failure.
+- Desktop entries are installed to `usr/share/applications` and icons to `usr/share/icons/hicolor`.
