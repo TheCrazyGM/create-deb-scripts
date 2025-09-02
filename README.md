@@ -19,7 +19,7 @@ Each script fetches the latest release from GitHub and builds a .deb that integr
 1. Clone this repository:
 
    ```bash
-   git clone https://github.com/TheCrazyGM/get-zen-debian.git && cd get-zen-debian
+   git clone https://github.com/TheCrazyGM/create-deb-scripts.git && cd create-deb-scripts
    ```
 
 2. Build Zen Browser .deb:
