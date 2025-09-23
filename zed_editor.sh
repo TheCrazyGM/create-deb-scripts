@@ -2,31 +2,47 @@
 # This script fetches the latest Zed Editor release from GitHub and builds a Debian package.
 set -euo pipefail
 
+# Logging helpers
+die() { echo "[ERROR] $*" >&2; exit 1; }
+info() { echo "[INFO]  $*"; }
+
 trap 'rm -rf zed.app "$TARBALL" "$BUILD_DIR" 2>/dev/null || true' EXIT
 
 # === CONFIG ===
 REPO="zed-industries/zed"
 GH_API="https://api.github.com"
 PACKAGE_NAME="zed-editor"
-ARCH="amd64"
-TARBALL="zed-linux-x86_64.tar.gz"
+ARCH="$(dpkg --print-architecture)"
 BUILD_DIR=""
+OUTDIR=$(pwd)
 
 # === CHECK DEPENDENCIES ===
 command_exist() { command -v "$1" >/dev/null 2>&1; }
 for dep in curl jq tar dpkg-deb; do
   if ! command_exist "$dep"; then
-    echo "Error: $dep is not installed." >&2
-    exit 1
+    die "$dep is not installed."
   fi
 done
 
+# === MAP ARCH TO TARBALL NAME ===
+case "$ARCH" in
+  amd64)
+    TARBALL="zed-linux-x86_64.tar.gz"
+    ;;
+  arm64)
+    TARBALL="zed-linux-aarch64.tar.gz"
+    ;;
+  *)
+    echo "Error: Unsupported architecture: $ARCH" >&2
+    exit 1
+    ;;
+esac
+
 # === FETCH LATEST RELEASE ===
-echo "Fetching latest release from $REPO..."
+info "Fetching latest release from $REPO..."
 release_data=$(curl -s "$GH_API/repos/$REPO/releases/latest")
 if [ -z "$release_data" ] || echo "$release_data" | jq -e '.message' >/dev/null; then
-  echo "Error: Failed to fetch release data." >&2
-  exit 1
+  die "Failed to fetch release data."
 fi
 
 # === EXTRACT VERSION AND TARBALL URL ===
@@ -37,18 +53,16 @@ if [[ "$DEB_VERSION" =~ ^v[0-9] ]]; then
   DEB_VERSION="${DEB_VERSION#v}"
 fi
 if [ "$VERSION" = "null" ] || [ -z "$VERSION" ]; then
-  echo "Error: No version found." >&2
-  exit 1
+  die "No version found."
 fi
 
 TARBALL_URL=$(echo "$release_data" | jq -r '.assets[] | select(.name == "'"$TARBALL"'") | .browser_download_url')
 if [ -z "$TARBALL_URL" ]; then
-  echo "Error: Tarball $TARBALL not found in latest release." >&2
-  exit 1
+  die "Tarball $TARBALL not found in latest release."
 fi
 
-echo "Latest version: $VERSION"
-echo "Downloading $TARBALL..."
+info "Latest version: $VERSION"
+info "Downloading $TARBALL..."
 
 # === DOWNLOAD THE TARBALL ===
 curl -L -o "$TARBALL" "$TARBALL_URL"
@@ -65,12 +79,12 @@ rm -rf "$BUILD_DIR"
 mkdir -p "$INSTALL_DIR" "$BIN_DIR" "$DESKTOP_DIR"
 
 # === EXTRACT THE TARBALL ===
-echo "Extracting tarball..."
+info "Extracting tarball..."
 tar -xf "$TARBALL"
 mv zed.app "$INSTALL_DIR/zed.app"
 
 # === CREATE EXECUTABLE WRAPPER ===
-echo "Creating wrapper script..."
+info "Creating wrapper script..."
 cat <<'EOF' >"$BIN_DIR/zed"
 #!/bin/bash
 exec /opt/zed.app/bin/zed "$@"
@@ -78,7 +92,7 @@ EOF
 chmod +x "$BIN_DIR/zed"
 
 # === INSTALL ICONS (copy bundled hicolor if present) ===
-echo "Installing icons (if available)..."
+info "Installing icons (if available)..."
 if [ -d "$INSTALL_DIR/zed.app/share/icons" ]; then
   mkdir -p "$BUILD_DIR/usr/share"
   cp -r "$INSTALL_DIR/zed.app/share/icons" "$BUILD_DIR/usr/share/" || true
@@ -87,7 +101,7 @@ else
 fi
 
 # === INSTALL .desktop FILE (copy upstream) ===
-echo "Installing .desktop file..."
+info "Installing .desktop file..."
 if [ -f "$INSTALL_DIR/zed.app/share/applications/zed.desktop" ]; then
   cp "$INSTALL_DIR/zed.app/share/applications/zed.desktop" "$DESKTOP_DIR/zed.desktop"
 else
@@ -103,7 +117,7 @@ EOF
 fi
 
 # === CREATE DEBIAN CONTROL FILE ===
-echo "Creating control file..."
+info "Creating control file..."
 mkdir -p "$BUILD_DIR/DEBIAN"
 cat <<EOF >"$BUILD_DIR/DEBIAN/control"
 Package: $PACKAGE_NAME
@@ -136,11 +150,11 @@ chmod +x "$BUILD_DIR/DEBIAN/postinst"
 chmod -R a+rX "$BUILD_DIR"
 
 # === BUILD THE DEB PACKAGE ===
-echo "Building .deb package..."
+info "Building .deb package..."
 dpkg-deb --build --root-owner-group "$BUILD_DIR"
 
 # === FINAL CLEANUP ===
-echo "Final cleanup..."
+info "Final cleanup..."
 rm -rf zed.app "$BUILD_DIR" "$TARBALL"
 
-echo "Done! Output: ${BUILD_DIR}.deb"
+echo "Done! Output: ${OUTDIR}/${BUILD_DIR}.deb"

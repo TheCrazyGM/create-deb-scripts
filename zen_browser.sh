@@ -2,31 +2,47 @@
 # This script fetches the latest Zen Browser release from GitHub and builds a Debian package.
 set -euo pipefail
 
+# Logging helpers
+die() { echo "[ERROR] $*" >&2; exit 1; }
+info() { echo "[INFO]  $*"; }
+
 trap 'rm -rf zen "$TARBALL" "$BUILD_DIR" 2>/dev/null || true' EXIT
 
 # === CONFIG ===
 REPO="zen-browser/desktop"
 GH_API="https://api.github.com"
 PACKAGE_NAME="zen-browser"
-ARCH="amd64"
-TARBALL="zen.linux-x86_64.tar.xz"
+ARCH="$(dpkg --print-architecture)"
 BUILD_DIR=""
+OUTDIR=$(pwd)
 
 # === CHECK DEPENDENCIES ===
 command_exist() { command -v "$1" >/dev/null 2>&1; }
 for dep in curl jq tar dpkg-deb; do
   if ! command_exist "$dep"; then
-    echo "Error: $dep is not installed." >&2
-    exit 1
+    die "$dep is not installed."
   fi
 done
 
+# === MAP ARCH TO TARBALL NAME ===
+case "$ARCH" in
+  amd64)
+    TARBALL="zen.linux-x86_64.tar.xz"
+    ;;
+  arm64)
+    TARBALL="zen.linux-aarch64.tar.xz"
+    ;;
+  *)
+    echo "Error: Unsupported architecture: $ARCH" >&2
+    exit 1
+    ;;
+esac
+
 # === FETCH LATEST RELEASE ===
-echo "Fetching latest release from $REPO..."
+info "Fetching latest release from $REPO..."
 release_data=$(curl -s "$GH_API/repos/$REPO/releases/latest")
 if [ -z "$release_data" ] || echo "$release_data" | jq -e '.message' >/dev/null; then
-  echo "Error: Failed to fetch release data." >&2
-  exit 1
+  die "Failed to fetch release data."
 fi
 
 # === EXTRACT VERSION AND TARBALL URL ===
@@ -36,21 +52,26 @@ if [ "$VERSION" = "null" ] || [ -z "$VERSION" ]; then
   exit 1
 fi
 
-TARBALL_URL=$(echo "$release_data" | jq -r '.assets[] | select(.name == "'"$TARBALL"'") | .browser_download_url')
-if [ -z "$TARBALL_URL" ]; then
-  echo "Error: Tarball $TARBALL not found in latest release." >&2
-  exit 1
+# Strip leading 'v' if present for Debian version compliance
+DEB_VERSION="$VERSION"
+if [[ "$DEB_VERSION" =~ ^v[0-9] ]]; then
+  DEB_VERSION="${DEB_VERSION#v}"
 fi
 
-echo "Latest version: $VERSION"
-echo "Downloading $TARBALL..."
+TARBALL_URL=$(echo "$release_data" | jq -r '.assets[] | select(.name == "'"$TARBALL"'") | .browser_download_url')
+if [ -z "$TARBALL_URL" ]; then
+  die "Tarball $TARBALL not found in latest release."
+fi
+
+info "Latest version: $VERSION"
+info "Downloading $TARBALL..."
 
 # === DOWNLOAD THE TARBALL ===
 curl -L -o "$TARBALL" "$TARBALL_URL"
 
 # === PROCEED WITH DEB CREATION ===
 # Set up build variables
-BUILD_DIR="${PACKAGE_NAME}_${VERSION}"
+BUILD_DIR="${PACKAGE_NAME}_${DEB_VERSION}"
 INSTALL_DIR="$BUILD_DIR/opt/zen"
 BIN_DIR="$BUILD_DIR/usr/local/bin"
 DESKTOP_DIR="$BUILD_DIR/usr/share/applications"
@@ -61,12 +82,12 @@ rm -rf "$BUILD_DIR"
 mkdir -p "$INSTALL_DIR" "$BIN_DIR" "$DESKTOP_DIR"
 
 # === EXTRACT THE TARBALL ===
-echo "Extracting tarball..."
+info "Extracting tarball..."
 tar -xf "$TARBALL"
 mv zen/* "$INSTALL_DIR"
 
 # === CREATE EXECUTABLE WRAPPER ===
-echo "Creating wrapper script..."
+info "Creating wrapper script..."
 cat <<EOF >"$BIN_DIR/zen"
 #!/bin/bash
 /opt/zen/zen "\$@"
@@ -74,12 +95,12 @@ EOF
 chmod +x "$BIN_DIR/zen"
 
 # === INSTALL ICONS (prefer bundled hicolor, fallback to defaults) ===
-echo "Installing icons..."
+info "Installing icons..."
 if [ -d "$INSTALL_DIR/share/icons" ]; then
   mkdir -p "$BUILD_DIR/usr/share"
   cp -r "$INSTALL_DIR/share/icons" "$BUILD_DIR/usr/share/" || true
 else
-  echo "Bundled hicolor icons not found; falling back to copying default PNGs." >&2
+  echo "Warning: Bundled hicolor icons not found; falling back to copying default PNGs." >&2
   for size in 16 32 48 64 128; do
     mkdir -p "$ICON_BASE/${size}x${size}/apps"
     if [ -f "$INSTALL_DIR/browser/chrome/icons/default/default${size}.png" ]; then
@@ -90,7 +111,7 @@ else
 fi
 
 # === CREATE .desktop FILE ===
-echo "Creating .desktop file..."
+info "Creating .desktop file..."
 cat <<EOF >"$DESKTOP_DIR/zen.desktop"
 [Desktop Entry]
 Name=Zen Browser
@@ -121,11 +142,11 @@ Exec=/opt/zen/zen --ProfileManager
 EOF
 
 # === CREATE DEBIAN CONTROL FILE ===
-echo "Creating control file..."
+info "Creating control file..."
 mkdir -p "$BUILD_DIR/DEBIAN"
 cat <<EOF >"$BUILD_DIR/DEBIAN/control"
 Package: $PACKAGE_NAME
-Version: $VERSION
+Version: $DEB_VERSION
 Section: web
 Priority: optional
 Architecture: $ARCH
@@ -152,11 +173,11 @@ chmod +x "$BUILD_DIR/DEBIAN/postinst"
 chmod -R a+rX "$BUILD_DIR"
 
 # === BUILD THE DEB PACKAGE ===
-echo "Building .deb package..."
+info "Building .deb package..."
 dpkg-deb --build --root-owner-group "$BUILD_DIR"
 
 # === FINAL CLEANUP ===
-echo "Final cleanup..."
+info "Final cleanup..."
 rm -rf zen "$BUILD_DIR" "$TARBALL"
 
-echo "Done! Output: ${BUILD_DIR}.deb"
+echo "Done! Output: ${OUTDIR}/${BUILD_DIR}.deb"

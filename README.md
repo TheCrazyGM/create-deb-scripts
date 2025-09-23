@@ -4,15 +4,24 @@ This repository provides automated scripts to build Debian packages for:
 
 - [Zen Browser](https://zen-browser.app/) – privacy-focused web browser
 - [Zed Editor](https://zed.dev/) – high-performance, multiplayer code editor
+- [Neovim (git)](https://neovim.io/) – built from source using CMake and packaged as a .deb
 
-Each script fetches the latest release from GitHub and builds a .deb that integrates with desktop environments (icons, desktop entries, and executables on PATH).
+Zed and Zen scripts fetch the latest upstream release from GitHub and build a .deb that integrates with desktop environments (icons, desktop entries, and executables on PATH). Neovim is built from the latest `neovim/neovim` repo source and then packaged.
 
 ## Requirements
+
+Common (all scripts):
 
 - `curl` for downloading
 - `jq` for JSON parsing
 - `tar` for extracting archives
 - `dpkg-deb` for building the package
+
+Additional for `neovim.sh` (build from source):
+
+- `git`
+- `cmake`
+- `make`
 
 ## Usage
 
@@ -34,13 +43,20 @@ Each script fetches the latest release from GitHub and builds a .deb that integr
    bash zed_editor.sh
    ```
 
-4. What the scripts do:
+4. Build Neovim (git) .deb:
+
+   ```bash
+   bash neovim.sh
+   ```
+
+5. What the scripts do:
    - Check for required dependencies
-   - Fetch the latest release from GitHub
-   - Download the official tarball
+   - Zed/Zen: Fetch the latest release from GitHub and download the official tarball
+   - Neovim: Clone `neovim/neovim`, build with CMake/Make, and stage install
+   - Generate Debian control metadata and desktop integration (where applicable)
    - Build the Debian package (.deb)
 
-5. Install the generated .deb files:
+6. Install the generated .deb files:
 
    ```bash
    sudo dpkg -i zen-browser_<version>.deb
@@ -51,8 +67,14 @@ Each script fetches the latest release from GitHub and builds a .deb that integr
 
 - Zen: `zen-browser_<version>.deb`
 - Zed: `zed-editor_<version>.deb`
+- Neovim: `neovim-git_<version>_<arch>.deb`
+
+The scripts print the absolute path to the generated `.deb` on success.
 
 ## Notes
 
+- Architecture is auto-detected via `dpkg --print-architecture` and the correct upstream asset is selected (Zed/Zen). Neovim is compiled for the detected architecture.
+- Upstream tags with a leading `v` (e.g., `v1.2.3`) are normalized for Debian versioning where applicable.
 - Scripts handle cleanup automatically, removing temporary files on completion or failure.
-- Desktop entries are installed to `usr/share/applications` and icons to `usr/share/icons/hicolor`.
+- Desktop entries are installed to `usr/share/applications` and icons to `usr/share/icons/hicolor` (Zed/Zen).
+- Post-install scripts refresh icon and desktop caches to ensure entries appear immediately.
