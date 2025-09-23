@@ -7,7 +7,10 @@ umask 0022
 # - Uses bundled third-party deps by default to avoid system detection issues (luv, etc.)
 
 # Utilities
-die() { echo "[ERROR] $*" >&2; exit 1; }
+die() {
+  echo "[ERROR] $*" >&2
+  exit 1
+}
 info() { echo "[INFO]  $*"; }
 
 # makenvim.sh - Build Neovim Debian package from git
@@ -38,7 +41,8 @@ PKGVER=$(git describe --always | sed -e 's:-:.:g' -e 's:v::')
 COMMITS=$(git rev-list --count HEAD)
 DATE=$(git log -1 --date=short --pretty=format:%cd | sed 's:-:.:g' | sed 's:_:.:g')
 FULLVER="${COMMITS}.${PKGVER}.${DATE}"
-SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct); export SOURCE_DATE_EPOCH
+SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
+export SOURCE_DATE_EPOCH
 
 # Package metadata for control file
 PKGNAME="neovim-git"
@@ -55,9 +59,9 @@ rm -rf build .builds .deps
 # Build using Neovim's top-level Makefile (handles third-party like luv correctly)
 # Prefer building bundled third-party libraries (luv, libvterm, unibilium, etc.)
 # to avoid system-detection issues. Allow override via USE_BUNDLED=0.
-CMAKE_FLAGS=( -DCMAKE_INSTALL_PREFIX=/usr )
+CMAKE_FLAGS=(-DCMAKE_INSTALL_PREFIX=/usr)
 if [[ "$(dpkg --print-architecture)" = "arm64" ]]; then
-  CMAKE_FLAGS+=( -DENABLE_JEMALLOC=FALSE )
+  CMAKE_FLAGS+=(-DENABLE_JEMALLOC=FALSE)
 fi
 CMAKE_EXTRA_FLAGS="${CMAKE_FLAGS[*]}" CMAKE_BUILD_TYPE=Release make -j "$(nproc)"
 
