@@ -31,40 +31,48 @@ Additional for `neovim.sh` (build from source):
    git clone https://github.com/TheCrazyGM/create-deb-scripts.git && cd create-deb-scripts
    ```
 
-2. Build Zen Browser .deb:
+2. Build Glide Browser .deb:
+
+   ```bash
+   bash glide_browser.sh
+   ```
+
+3. Build Zen Browser .deb:
 
    ```bash
    bash zen_browser.sh
    ```
 
-3. Build Zed Editor .deb:
+4. Build Zed Editor .deb:
 
    ```bash
    bash zed_editor.sh
    ```
 
-4. Build Neovim (git) .deb:
+5. Build Neovim (git) .deb:
 
    ```bash
    bash neovim.sh
    ```
 
-5. What the scripts do:
+6. What the scripts do:
    - Check for required dependencies
    - Zed/Zen: Fetch the latest release from GitHub and download the official tarball
    - Neovim: Clone `neovim/neovim`, build with CMake/Make, and stage install
    - Generate Debian control metadata and desktop integration (where applicable)
    - Build the Debian package (.deb)
 
-6. Install the generated .deb files:
+7. Install the generated .deb files:
 
    ```bash
+   sudo dpkg -i glide-browser_<version>.deb
    sudo dpkg -i zen-browser_<version>.deb
    sudo dpkg -i zed-editor_<version>.deb
    ```
 
 ## Output
 
+- Glide: `glide-browser_<version>.deb`
 - Zen: `zen-browser_<version>.deb`
 - Zed: `zed-editor_<version>.deb`
 - Neovim: `neovim-git_<version>_<arch>.deb`
