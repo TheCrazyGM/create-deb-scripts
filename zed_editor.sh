@@ -3,7 +3,10 @@
 set -euo pipefail
 
 # Logging helpers
-die() { echo "[ERROR] $*" >&2; exit 1; }
+die() {
+  echo "[ERROR] $*" >&2
+  exit 1
+}
 info() { echo "[INFO]  $*"; }
 
 trap 'rm -rf zed.app "$TARBALL" "$BUILD_DIR" 2>/dev/null || true' EXIT
@@ -26,16 +29,16 @@ done
 
 # === MAP ARCH TO TARBALL NAME ===
 case "$ARCH" in
-  amd64)
-    TARBALL="zed-linux-x86_64.tar.gz"
-    ;;
-  arm64)
-    TARBALL="zed-linux-aarch64.tar.gz"
-    ;;
-  *)
-    echo "Error: Unsupported architecture: $ARCH" >&2
-    exit 1
-    ;;
+amd64)
+  TARBALL="zed-linux-x86_64.tar.gz"
+  ;;
+arm64)
+  TARBALL="zed-linux-aarch64.tar.gz"
+  ;;
+*)
+  echo "Error: Unsupported architecture: $ARCH" >&2
+  exit 1
+  ;;
 esac
 
 # === FETCH LATEST RELEASE ===

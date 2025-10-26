@@ -3,7 +3,10 @@
 set -euo pipefail
 
 # Logging helpers
-die() { echo "[ERROR] $*" >&2; exit 1; }
+die() {
+  echo "[ERROR] $*" >&2
+  exit 1
+}
 info() { echo "[INFO]  $*"; }
 
 trap 'rm -rf zen "$TARBALL" "$BUILD_DIR" 2>/dev/null || true' EXIT
@@ -26,16 +29,16 @@ done
 
 # === MAP ARCH TO TARBALL NAME ===
 case "$ARCH" in
-  amd64)
-    TARBALL="zen.linux-x86_64.tar.xz"
-    ;;
-  arm64)
-    TARBALL="zen.linux-aarch64.tar.xz"
-    ;;
-  *)
-    echo "Error: Unsupported architecture: $ARCH" >&2
-    exit 1
-    ;;
+amd64)
+  TARBALL="zen.linux-x86_64.tar.xz"
+  ;;
+arm64)
+  TARBALL="zen.linux-aarch64.tar.xz"
+  ;;
+*)
+  echo "Error: Unsupported architecture: $ARCH" >&2
+  exit 1
+  ;;
 esac
 
 # === FETCH LATEST RELEASE ===
