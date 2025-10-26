@@ -94,6 +94,9 @@ Maintainer: $MAINTAINER
 Description: $PKGDESC
 Homepage: $URL
 Depends: $DEPENDS
+Provides: neovim
+Conflicts: neovim
+Replaces: neovim
 EOF
 
 # Post-install to refresh icon and desktop caches
