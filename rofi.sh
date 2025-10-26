@@ -88,6 +88,9 @@ Maintainer: ${MAINTAINER}
 Description: ${PKGDESC}
 Homepage: ${URL}
 Depends: ${DEPENDS}
+Provides: rofi
+Conflicts: rofi
+Replaces: rofi
 EOF
 
 find "${PKGDIR}" -exec touch -h -d @"${SOURCE_DATE_EPOCH}" {} +
