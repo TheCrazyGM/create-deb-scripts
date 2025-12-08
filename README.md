@@ -6,6 +6,7 @@ This repository provides automated scripts to build Debian packages for:
 - [Zed Editor](https://zed.dev/) – high-performance, multiplayer code editor
 - [Neovim (git)](https://neovim.io/) – built from source using CMake and packaged as a .deb
 - [Rofi (git)](https://github.com/davatorium/rofi) – built from source with Meson/Ninja and packaged as a .deb
+- [Picom (git)](https://github.com/yshui/picom) – built from source with Meson/Ninja and packaged as a .deb
 
 Zed and Zen scripts fetch the latest upstream release from GitHub and build a .deb that integrates with desktop environments (icons, desktop entries, and executables on PATH). Neovim is built from the latest `neovim/neovim` repo source and then packaged.
 
@@ -24,7 +25,7 @@ Additional for `neovim.sh` (build from source):
 - `cmake`
 - `make`
 
-Additional for `rofi.sh` (build from source):
+Additional for `rofi.sh` and `picom.sh` (build from source):
 
 - `git`
 - `meson`
@@ -71,15 +72,22 @@ Additional for `rofi.sh` (build from source):
    bash rofi.sh
    ```
 
-7. What the scripts do:
+7. Build Picom (git) .deb:
+
+   ```bash
+   bash picom.sh
+   ```
+
+8. What the scripts do:
    - Check for required dependencies
    - Zed/Zen: Fetch the latest release from GitHub and download the official tarball
    - Neovim: Clone `neovim/neovim`, build with CMake/Make, and stage install
    - Rofi: Clone `davatorium/rofi`, build with Meson/Ninja, and stage install
+   - Picom: Clone `yshui/picom`, build with Meson/Ninja, and stage install
    - Generate Debian control metadata and desktop integration (where applicable)
    - Build the Debian package (.deb)
 
-8. Install the generated .deb files:
+9. Install the generated .deb files:
 
    ```bash
    sudo dpkg -i glide-browser_<version>.deb
@@ -94,6 +102,7 @@ Additional for `rofi.sh` (build from source):
 - Zed: `zed-editor_<version>.deb`
 - Neovim: `neovim-git_<version>_<arch>.deb`
 - Rofi: `rofi-git_<version>_<arch>.deb`
+- Picom: `picom-git_<version>_<arch>.deb`
 
 The scripts print the absolute path to the generated `.deb` on success.
 
