@@ -72,7 +72,7 @@ make install DESTDIR="$PKGDIR"
 
 # Install extras
 install -Dm644 LICENSE.txt "$PKGDIR/usr/share/doc/neovim/copyright"
-install -Dm644 runtime/nvim.desktop "$PKGDIR/usr/share/applications/nvim.desktop"
+install -Dm644 runtime/org.neovim.nvim.desktop "$PKGDIR/usr/share/applications/nvim.desktop"
 install -Dm644 runtime/nvim.png "$PKGDIR/usr/share/pixmaps/nvim.png"
 mkdir -p "$PKGDIR/usr/share/vim"
 mkdir -p "$PKGDIR/etc/xdg/nvim"
