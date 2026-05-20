@@ -113,10 +113,12 @@ chmod +x "$BIN_DIR/antigravity-ide"
 info "Installing icons..."
 ICON_TARGET_DIR="$BUILD_DIR/usr/share/icons/hicolor/scalable/apps"
 mkdir -p "$ICON_TARGET_DIR"
-if [ -f "$INSTALL_DIR/resources/app/out/media/code-icon.svg" ]; then
-  cp "$INSTALL_DIR/resources/app/out/media/code-icon.svg" "$ICON_TARGET_DIR/antigravity-ide.svg"
-elif [ -f "$INSTALL_DIR/resources/app/out/media/jetski-logo-black.svg" ]; then
+if [ -f "$INSTALL_DIR/resources/app/out/media/jetski-logo-black.svg" ]; then
   cp "$INSTALL_DIR/resources/app/out/media/jetski-logo-black.svg" "$ICON_TARGET_DIR/antigravity-ide.svg"
+elif [ -f "$INSTALL_DIR/resources/app/out/media/jetski-logo-white.svg" ]; then
+  cp "$INSTALL_DIR/resources/app/out/media/jetski-logo-white.svg" "$ICON_TARGET_DIR/antigravity-ide.svg"
+elif [ -f "$INSTALL_DIR/resources/app/out/media/code-icon.svg" ]; then
+  cp "$INSTALL_DIR/resources/app/out/media/code-icon.svg" "$ICON_TARGET_DIR/antigravity-ide.svg"
 else
   echo "Warning: Icon file not found in package; desktop icon may be missing." >&2
 fi

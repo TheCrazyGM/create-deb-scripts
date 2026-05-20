@@ -113,6 +113,16 @@ exec /opt/google/antigravity/antigravity "\$@"
 EOF
 chmod +x "$BIN_DIR/antigravity"
 
+# === INSTALL ICONS ===
+info "Installing icons..."
+ICON_TARGET_DIR="$BUILD_DIR/usr/share/icons/hicolor/scalable/apps"
+mkdir -p "$ICON_TARGET_DIR"
+if curl -sL --compressed "https://antigravity.google/assets/image/antigravity-logo.svg" -o "$ICON_TARGET_DIR/antigravity.svg"; then
+  info "Icon downloaded successfully."
+else
+  echo "Warning: Failed to download icon from website." >&2
+fi
+
 # === CREATE .desktop FILE ===
 info "Creating .desktop file..."
 cat <<EOF >"$DESKTOP_DIR/antigravity.desktop"
