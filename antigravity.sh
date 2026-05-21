@@ -19,7 +19,7 @@ BUILD_DIR=""
 OUTDIR=$(pwd)
 TARBALL="antigravity.tar.gz"
 
-DOWNLOAD_PAGE_URL="https://antigravity.google/download"
+RELEASES_PAGE_URL="https://antigravity.google/releases"
 BASE_URL="https://antigravity.google"
 
 # === CHECK DEPENDENCIES ===
@@ -45,28 +45,47 @@ arm64)
 esac
 
 # === DYNAMICALLY FETCH LATEST TARBALL URL ===
-info "Fetching download page to find JavaScript bundle..."
-html_content=$(curl -sL --compressed "$DOWNLOAD_PAGE_URL")
+info "Fetching releases page to find JavaScript bundle..."
+html_content=$(curl -sL --compressed "$RELEASES_PAGE_URL")
 MAIN_JS=$(echo "$html_content" | grep -oE 'main-[a-zA-Z0-9]+\.js' | head -n 1)
 
 if [ -z "$MAIN_JS" ]; then
-  die "Failed to locate main JavaScript bundle on the download page."
+  die "Failed to locate main JavaScript bundle on the releases page."
 fi
 
 info "Fetching JavaScript bundle: $MAIN_JS..."
 js_content=$(curl -sL --compressed "$BASE_URL/$MAIN_JS")
 
-info "Locating download URL for architecture: $ARCH ($ARCH_SUFFIX)..."
-TARBALL_URL=$(echo "$js_content" | grep -oE "https://storage\.googleapis\.com/antigravity-public/antigravity-hub/[0-9a-zA-Z.-]+/${ARCH_SUFFIX}/Antigravity\.tar\.gz" | head -n 1)
+# Try to extract API URL from JS bundle
+API_URL=$(echo "$js_content" | grep -oE 'https://antigravity-auto-updater-[0-9a-zA-Z.-]+\.run\.app/releases' | head -n 1 || true)
 
-if [ -z "$TARBALL_URL" ]; then
-  die "Tarball URL for $ARCH ($ARCH_SUFFIX) not found in JavaScript bundle."
+TARBALL_URL=""
+VERSION=""
+
+if [ -n "$API_URL" ]; then
+  info "Querying auto-updater API: $API_URL..."
+  api_response=$(curl -sL "$API_URL" || true)
+  if [ -n "$api_response" ]; then
+    VERSION_VAL=$(echo "$api_response" | jq -r '.[0].version' 2>/dev/null || true)
+    EXEC_ID=$(echo "$api_response" | jq -r '.[0].execution_id' 2>/dev/null || true)
+    if [ -n "$VERSION_VAL" ] && [ "$VERSION_VAL" != "null" ] && [ -n "$EXEC_ID" ] && [ "$EXEC_ID" != "null" ]; then
+      VERSION="${VERSION_VAL}-${EXEC_ID}"
+      TARBALL_URL="https://storage.googleapis.com/antigravity-public/antigravity-hub/${VERSION}/${ARCH_SUFFIX}/Antigravity.tar.gz"
+      info "Found version $VERSION from API."
+    fi
+  fi
 fi
 
-# === EXTRACT VERSION ===
-VERSION=$(echo "$TARBALL_URL" | sed -n "s|.*/antigravity-hub/\([^/]*\)/${ARCH_SUFFIX}/.*|\1|p")
-if [ -z "$VERSION" ]; then
-  die "Failed to extract version from URL: $TARBALL_URL"
+if [ -z "$TARBALL_URL" ]; then
+  info "Fallback: locating download URL directly in JavaScript bundle..."
+  TARBALL_URL=$(echo "$js_content" | grep -oE "https://storage\.googleapis\.com/antigravity-public/antigravity-hub/[0-9a-zA-Z.-]+/${ARCH_SUFFIX}/Antigravity\.tar\.gz" | head -n 1 || true)
+  if [ -z "$TARBALL_URL" ]; then
+    die "Tarball URL for $ARCH ($ARCH_SUFFIX) not found."
+  fi
+  VERSION=$(echo "$TARBALL_URL" | sed -n "s|.*/antigravity-hub/\([^/]*\)/${ARCH_SUFFIX}/.*|\1|p")
+  if [ -z "$VERSION" ]; then
+    die "Failed to extract version from URL: $TARBALL_URL"
+  fi
 fi
 
 DEB_VERSION="$VERSION"
