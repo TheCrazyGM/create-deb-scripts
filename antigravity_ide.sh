@@ -9,15 +9,17 @@ die() {
 }
 info() { echo "[INFO]  $*"; }
 
+# Create temporary build directory
+TMP_BUILD_DIR=$(mktemp -d /tmp/antigravity-ide-build.XXXXXX)
+
 # Cleanup on exit
-trap 'rm -rf "Antigravity IDE"* "$TARBALL" "$BUILD_DIR" 2>/dev/null || true' EXIT
+trap 'rm -rf "$TMP_BUILD_DIR" 2>/dev/null || true' EXIT
 
 # === CONFIG ===
 PACKAGE_NAME="antigravity-ide"
 ARCH="$(dpkg --print-architecture)"
-BUILD_DIR=""
 OUTDIR=$(pwd)
-TARBALL="antigravity_ide.tar.gz"
+TEMP_JS="$TMP_BUILD_DIR/main_js_temp.js"
 
 RELEASES_PAGE_URL="https://antigravity.google/releases"
 BASE_URL="https://antigravity.google"
@@ -46,7 +48,7 @@ esac
 
 # === DYNAMICALLY FETCH LATEST TARBALL URL ===
 info "Fetching releases page to find JavaScript bundle..."
-html_content=$(curl -sL --compressed "$RELEASES_PAGE_URL")
+html_content=$(curl -sL --compressed "$RELEASES_PAGE_URL" || curl -sL --compressed "https://antigravity.google/download")
 MAIN_JS=$(echo "$html_content" | grep -oE 'main-[a-zA-Z0-9]+\.js' | head -n 1)
 
 if [ -z "$MAIN_JS" ]; then
@@ -54,24 +56,62 @@ if [ -z "$MAIN_JS" ]; then
 fi
 
 info "Fetching JavaScript bundle: $MAIN_JS..."
-js_content=$(curl -sL --compressed "$BASE_URL/$MAIN_JS")
+curl -sL --compressed -o "$TEMP_JS" "$BASE_URL/$MAIN_JS"
 
-# Try to extract API URL from JS bundle
-API_URL=$(echo "$js_content" | grep -oE 'https://antigravity-ide-auto-updater-[0-9a-zA-Z.-]+\.run\.app/releases' | head -n 1 || true)
+info "Parsing download URL and version from JavaScript bundle..."
+DOWNLOAD_FIELDS=$(python3 - "$TEMP_JS" "$ARCH_SUFFIX" <<'PY'
+import sys, re, pathlib
+bundle_path = sys.argv[1]
+platform = sys.argv[2]
+bundle = pathlib.Path(bundle_path).read_text(encoding="utf-8", errors="ignore")
+
+# Method 1: Section-based search (from website config structure)
+start = bundle.find('id:"antigravity-ide"')
+end = bundle.find('},{name:"download",id:"antigravity-sdk"', start)
+if start != -1 and end != -1:
+    section = bundle[start:end]
+    match = re.search(r'href:"([^"]+/' + re.escape(platform) + r'/Antigravity%20IDE\.tar\.gz)"', section)
+    if match:
+        url = match.group(1)
+        version_match = re.search(r'/stable/([^/]+)/', url)
+        if version_match:
+            print(f"{version_match.group(1)} {url}")
+            sys.exit(0)
+
+# Method 2: Global URL search fallback
+match = re.search(r'href:"(https://edgedl\.me\.gvt1\.com/edgedl/release2/[a-zA-Z0-9]+/antigravity/stable/[0-9a-zA-Z.-]+/' + re.escape(platform) + r'/Antigravity%20IDE\.tar\.gz)"', bundle)
+if match:
+    url = match.group(1)
+    version_match = re.search(r'/stable/([^/]+)/', url)
+    if version_match:
+        print(f"{version_match.group(1)} {url}")
+        sys.exit(0)
+
+sys.exit(1)
+PY
+)
 
 TARBALL_URL=""
 VERSION=""
 
-if [ -n "$API_URL" ]; then
-  info "Querying auto-updater API: $API_URL..."
-  api_response=$(curl -sL "$API_URL" || true)
-  if [ -n "$api_response" ]; then
-    VERSION_VAL=$(echo "$api_response" | jq -r '.[0].version' 2>/dev/null || true)
-    EXEC_ID=$(echo "$api_response" | jq -r '.[0].execution_id' 2>/dev/null || true)
-    if [ -n "$VERSION_VAL" ] && [ "$VERSION_VAL" != "null" ] && [ -n "$EXEC_ID" ] && [ "$EXEC_ID" != "null" ]; then
-      VERSION="${VERSION_VAL}-${EXEC_ID}"
-      TARBALL_URL="https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/${VERSION}/${ARCH_SUFFIX}/Antigravity%20IDE.tar.gz"
-      info "Found version $VERSION from API."
+if [ -n "$DOWNLOAD_FIELDS" ]; then
+  VERSION=$(echo "$DOWNLOAD_FIELDS" | cut -d' ' -f1)
+  TARBALL_URL=$(echo "$DOWNLOAD_FIELDS" | cut -d' ' -f2)
+  info "Found version $VERSION from JS bundle."
+else
+  # Try to extract API URL from JS bundle
+  API_URL=$(echo "$js_content" | grep -oE 'https://antigravity-ide-auto-updater-[0-9a-zA-Z.-]+\.run\.app/releases' | head -n 1 || true)
+  if [ -n "$API_URL" ]; then
+    info "Querying auto-updater API: $API_URL..."
+    api_response=$(curl -sL "$API_URL" || true)
+    if [ -n "$api_response" ]; then
+      VERSION_VAL=$(echo "$api_response" | jq -r '.[0].version' 2>/dev/null || true)
+      EXEC_ID=$(echo "$api_response" | jq -r '.[0].execution_id' 2>/dev/null || true)
+      if [ -n "$VERSION_VAL" ] && [ "$VERSION_VAL" != "null" ] && [ -n "$EXEC_ID" ] && [ "$EXEC_ID" != "null" ]; then
+        VERSION="${VERSION_VAL}-${EXEC_ID}"
+        TARBALL_URL="https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/${VERSION}/${ARCH_SUFFIX}/Antigravity%20IDE.tar.gz"
+        info "Found version $VERSION from API."
+      fi
     fi
   fi
 fi
@@ -91,34 +131,40 @@ fi
 DEB_VERSION="$VERSION"
 
 info "Latest version: $DEB_VERSION"
+TARBALL="$TMP_BUILD_DIR/antigravity_ide.tar.gz"
+BUILD_DIR="$TMP_BUILD_DIR/${PACKAGE_NAME}_${DEB_VERSION}"
+INSTALL_DIR="$BUILD_DIR/opt/google/antigravity-ide"
+BIN_DIR="$BUILD_DIR/usr/local/bin"
+DESKTOP_DIR="$BUILD_DIR/usr/share/applications"
+
 info "Downloading $TARBALL_URL..."
 
 # === DOWNLOAD THE TARBALL ===
 curl -L -o "$TARBALL" "$TARBALL_URL"
 
 # === PROCEED WITH DEB CREATION ===
-# Set up build variables
-BUILD_DIR="${PACKAGE_NAME}_${DEB_VERSION}"
-INSTALL_DIR="$BUILD_DIR/opt/google/antigravity-ide"
-BIN_DIR="$BUILD_DIR/usr/local/bin"
-DESKTOP_DIR="$BUILD_DIR/usr/share/applications"
-
-# === CLEAN UP OLD BUILDS ===
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR/opt/google" "$BIN_DIR" "$DESKTOP_DIR"
 
 # === EXTRACT THE TARBALL ===
 info "Extracting tarball..."
-tar -xf "$TARBALL"
+tar -xf "$TARBALL" -C "$TMP_BUILD_DIR"
 
 # Find extracted folder (e.g. Antigravity IDE or similar)
-EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "Antigravity IDE*" | head -n 1)
+EXTRACTED_DIR=$(find "$TMP_BUILD_DIR" -maxdepth 2 -type d -name "Antigravity IDE*" | head -n 1)
 if [ -z "$EXTRACTED_DIR" ]; then
   die "Could not find extracted Antigravity IDE folder"
 fi
 
 info "Moving files from $EXTRACTED_DIR to $INSTALL_DIR..."
 mv "$EXTRACTED_DIR" "$INSTALL_DIR"
+
+# === SET CHROME-SANDBOX PERMISSIONS ===
+if [ -f "$INSTALL_DIR/chrome-sandbox" ]; then
+  info "Setting SUID permissions on chrome-sandbox..."
+  chmod 4755 "$INSTALL_DIR/chrome-sandbox"
+fi
+
 
 # === CREATE EXECUTABLE WRAPPER ===
 info "Creating wrapper script..."
@@ -192,9 +238,10 @@ chmod -R a+rX "$BUILD_DIR"
 # === BUILD THE DEB PACKAGE ===
 info "Building .deb package..."
 dpkg-deb --build --root-owner-group "$BUILD_DIR"
+mv "${BUILD_DIR}.deb" "$OUTDIR/"
 
 # === FINAL CLEANUP ===
 info "Final cleanup..."
-rm -rf "$BUILD_DIR" "$TARBALL"
+# (trap handles the removal of $TMP_BUILD_DIR on exit)
 
 echo "Done! Output: ${OUTDIR}/${PACKAGE_NAME}_${DEB_VERSION}.deb"
