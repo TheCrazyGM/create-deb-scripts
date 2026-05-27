@@ -9,15 +9,17 @@ die() {
 }
 info() { echo "[INFO]  $*"; }
 
-trap 'rm -rf glide "$TARBALL" "$BUILD_DIR" 2>/dev/null || true' EXIT
+# Create temporary build directory
+TMP_BUILD_DIR=$(mktemp -d /tmp/glide-build.XXXXXX)
+
+# Cleanup on exit
+trap 'rm -rf "$TMP_BUILD_DIR" 2>/dev/null || true' EXIT
 
 # === CONFIG ===
 REPO="glide-browser/glide"
 GH_API="https://api.github.com"
 PACKAGE_NAME="glide-browser"
 ARCH="$(dpkg --print-architecture)"
-BUILD_DIR=""
-TARBALL=""
 OUTDIR=$(pwd)
 
 # === CHECK DEPENDENCIES ===
@@ -68,10 +70,11 @@ info "Latest version: $VERSION"
 info "Downloading $TARBALL..."
 
 # === DOWNLOAD THE TARBALL ===
-curl -L -o "$TARBALL" "$TARBALL_URL"
+TARBALL_PATH="$TMP_BUILD_DIR/$TARBALL"
+curl -L -o "$TARBALL_PATH" "$TARBALL_URL"
 
 # === PROCEED WITH DEB CREATION ===
-BUILD_DIR="${PACKAGE_NAME}_${DEB_VERSION}"
+BUILD_DIR="$TMP_BUILD_DIR/${PACKAGE_NAME}_${DEB_VERSION}"
 INSTALL_DIR="$BUILD_DIR/opt/glide"
 BIN_DIR="$BUILD_DIR/usr/local/bin"
 DESKTOP_DIR="$BUILD_DIR/usr/share/applications"
@@ -83,12 +86,12 @@ mkdir -p "$(dirname "$INSTALL_DIR")" "$BIN_DIR" "$DESKTOP_DIR"
 
 # === EXTRACT THE TARBALL ===
 info "Extracting tarball..."
-tar -xf "$TARBALL"
-if [ ! -d glide ]; then
+tar -xf "$TARBALL_PATH" -C "$TMP_BUILD_DIR"
+if [ ! -d "$TMP_BUILD_DIR/glide" ]; then
   die "Expected 'glide' directory after extraction."
 fi
 rm -rf "$INSTALL_DIR"
-mv glide "$INSTALL_DIR"
+mv "$TMP_BUILD_DIR/glide" "$INSTALL_DIR"
 
 # === CREATE EXECUTABLE WRAPPER ===
 info "Creating wrapper script..."
@@ -161,8 +164,9 @@ chmod -R a+rX "$BUILD_DIR"
 # === BUILD THE DEB PACKAGE ===
 info "Building .deb package..."
 dpkg-deb --build --root-owner-group "$BUILD_DIR"
+mv "${BUILD_DIR}.deb" "$OUTDIR/"
 
 info "Final cleanup..."
-rm -rf "$BUILD_DIR" "$TARBALL"
+# (trap handles the cleanup of $TMP_BUILD_DIR)
 
-echo "Done! Output: ${OUTDIR}/${BUILD_DIR}.deb"
+echo "Done! Output: ${OUTDIR}/${PACKAGE_NAME}_${DEB_VERSION}.deb"

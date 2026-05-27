@@ -9,14 +9,17 @@ die() {
 }
 info() { echo "[INFO]  $*"; }
 
-trap 'rm -rf zen "$TARBALL" "$BUILD_DIR" 2>/dev/null || true' EXIT
+# Create temporary build directory
+TMP_BUILD_DIR=$(mktemp -d /tmp/zen-build.XXXXXX)
+
+# Cleanup on exit
+trap 'rm -rf "$TMP_BUILD_DIR" 2>/dev/null || true' EXIT
 
 # === CONFIG ===
 REPO="zen-browser/desktop"
 GH_API="https://api.github.com"
 PACKAGE_NAME="zen-browser"
 ARCH="$(dpkg --print-architecture)"
-BUILD_DIR=""
 OUTDIR=$(pwd)
 
 # === CHECK DEPENDENCIES ===
@@ -70,11 +73,12 @@ info "Latest version: $VERSION"
 info "Downloading $TARBALL..."
 
 # === DOWNLOAD THE TARBALL ===
-curl -L -o "$TARBALL" "$TARBALL_URL"
+TARBALL_PATH="$TMP_BUILD_DIR/$TARBALL"
+curl -L -o "$TARBALL_PATH" "$TARBALL_URL"
 
 # === PROCEED WITH DEB CREATION ===
 # Set up build variables
-BUILD_DIR="${PACKAGE_NAME}_${DEB_VERSION}"
+BUILD_DIR="$TMP_BUILD_DIR/${PACKAGE_NAME}_${DEB_VERSION}"
 INSTALL_DIR="$BUILD_DIR/opt/zen"
 BIN_DIR="$BUILD_DIR/usr/local/bin"
 DESKTOP_DIR="$BUILD_DIR/usr/share/applications"
@@ -86,8 +90,8 @@ mkdir -p "$INSTALL_DIR" "$BIN_DIR" "$DESKTOP_DIR"
 
 # === EXTRACT THE TARBALL ===
 info "Extracting tarball..."
-tar -xf "$TARBALL"
-mv zen/* "$INSTALL_DIR"
+tar -xf "$TARBALL_PATH" -C "$TMP_BUILD_DIR"
+mv "$TMP_BUILD_DIR"/zen/* "$INSTALL_DIR"
 
 # === CREATE EXECUTABLE WRAPPER ===
 info "Creating wrapper script..."
@@ -178,9 +182,10 @@ chmod -R a+rX "$BUILD_DIR"
 # === BUILD THE DEB PACKAGE ===
 info "Building .deb package..."
 dpkg-deb --build --root-owner-group "$BUILD_DIR"
+mv "${BUILD_DIR}.deb" "$OUTDIR/"
 
 # === FINAL CLEANUP ===
 info "Final cleanup..."
-rm -rf zen "$BUILD_DIR" "$TARBALL"
+# (trap handles the cleanup of $TMP_BUILD_DIR)
 
-echo "Done! Output: ${OUTDIR}/${BUILD_DIR}.deb"
+echo "Done! Output: ${OUTDIR}/${PACKAGE_NAME}_${DEB_VERSION}.deb"
