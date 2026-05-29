@@ -58,6 +58,22 @@ MAINTAINER="Michael Garcia <thecrazygm@gmail.com>"
 URL="https://github.com/alacritty/alacritty"
 ARCH=$(dpkg --print-architecture)
 
+DEB_FILE="${OUTDIR}/${PKGNAME}_${FULLVER}_${ARCH}.deb"
+if [[ -f "$DEB_FILE" ]]; then
+  info "Package $(basename "$DEB_FILE") already exists."
+  if [[ -t 0 ]]; then
+    read -p "Do you want to rebuild it? [y/N] " -r response
+    if [[ ! "$response" =~ ^[Yy]$ ]]; then
+      info "Skipping build."
+      exit 0
+    fi
+  else
+    info "Non-interactive shell, skipping rebuild."
+    exit 0
+  fi
+fi
+
+
 # Dependencies based on INSTALL.md and typical usage
 # Build deps: cmake, pkg-config, libfreetype6-dev, libfontconfig1-dev, libxcb-xfixes0-dev, libxkbcommon-dev
 # Runtime deps:

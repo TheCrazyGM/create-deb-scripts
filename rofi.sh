@@ -45,6 +45,22 @@ PKGDESC="Unified window switcher, run dialog, and dmenu replacement"
 MAINTAINER="Michael Garcia <thecrazygm@gmail.com>"
 URL="https://github.com/davatorium/rofi"
 ARCH=$(dpkg --print-architecture)
+
+DEB_FILE="${OUTDIR}/${PKGNAME}_${FULLVER}_${ARCH}.deb"
+if [[ -f "$DEB_FILE" ]]; then
+  info "Package $(basename "$DEB_FILE") already exists."
+  if [[ -t 0 ]]; then
+    read -p "Do you want to rebuild it? [y/N] " -r response
+    if [[ ! "$response" =~ ^[Yy]$ ]]; then
+      info "Skipping build."
+      exit 0
+    fi
+  else
+    info "Non-interactive shell, skipping rebuild."
+    exit 0
+  fi
+fi
+
 # Runtime deps aligned with INSTALL.md guidance and linked libraries from build output
 DEPENDS="libc6, libcairo2, libglib2.0-0 (>= 2.72), libgdk-pixbuf-2.0-0, libpango-1.0-0 (>= 1.50), libpangocairo-1.0-0 (>= 1.50), libstartup-notification0, libwayland-client0, libwayland-cursor0, libxcb1 (>= 1.14), libxcb-cursor0, libxcb-ewmh2, libxcb-icccm4, libxcb-keysyms1, libxcb-randr0, libxcb-render0, libxcb-util1, libxcb-xinerama0, libxcb-xkb1, libxkbcommon0 (>= 0.4.1), libxkbcommon-x11-0"
 

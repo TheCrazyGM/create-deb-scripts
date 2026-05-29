@@ -131,6 +131,22 @@ fi
 DEB_VERSION="$VERSION"
 
 info "Latest version: $DEB_VERSION"
+
+DEB_FILE="${OUTDIR}/${PACKAGE_NAME}_${DEB_VERSION}.deb"
+if [[ -f "$DEB_FILE" ]]; then
+  info "Package $(basename "$DEB_FILE") already exists."
+  if [[ -t 0 ]]; then
+    read -p "Do you want to rebuild it? [y/N] " -r response
+    if [[ ! "$response" =~ ^[Yy]$ ]]; then
+      info "Skipping build."
+      exit 0
+    fi
+  else
+    info "Non-interactive shell, skipping rebuild."
+    exit 0
+  fi
+fi
+
 TARBALL="$TMP_BUILD_DIR/antigravity.tar.gz"
 BUILD_DIR="$TMP_BUILD_DIR/${PACKAGE_NAME}_${DEB_VERSION}"
 INSTALL_DIR="$BUILD_DIR/opt/google/antigravity"

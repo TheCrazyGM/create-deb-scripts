@@ -68,6 +68,22 @@ if [ -z "$TARBALL_URL" ]; then
 fi
 
 info "Latest version: $VERSION"
+
+DEB_FILE="${OUTDIR}/${PACKAGE_NAME}_${DEB_VERSION}.deb"
+if [[ -f "$DEB_FILE" ]]; then
+  info "Package $(basename "$DEB_FILE") already exists."
+  if [[ -t 0 ]]; then
+    read -p "Do you want to rebuild it? [y/N] " -r response
+    if [[ ! "$response" =~ ^[Yy]$ ]]; then
+      info "Skipping build."
+      exit 0
+    fi
+  else
+    info "Non-interactive shell, skipping rebuild."
+    exit 0
+  fi
+fi
+
 info "Downloading $TARBALL..."
 
 # === DOWNLOAD THE TARBALL ===
