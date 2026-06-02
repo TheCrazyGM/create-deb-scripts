@@ -69,7 +69,7 @@ fi
 
 info "Latest version: $VERSION"
 
-DEB_FILE="${OUTDIR}/${PACKAGE_NAME}_${DEB_VERSION}.deb"
+DEB_FILE="${OUTDIR}/${PACKAGE_NAME}_${DEB_VERSION}_${ARCH}.deb"
 if [[ -f "$DEB_FILE" ]]; then
   info "Package $(basename "$DEB_FILE") already exists."
   if [[ -t 0 ]]; then
@@ -175,10 +175,10 @@ chmod -R a+rX "$BUILD_DIR"
 # === BUILD THE DEB PACKAGE ===
 info "Building .deb package..."
 dpkg-deb --build --root-owner-group "$BUILD_DIR"
-mv "${BUILD_DIR}.deb" "$OUTDIR/"
+mv "${BUILD_DIR}.deb" "$DEB_FILE"
 
 # === FINAL CLEANUP ===
 info "Final cleanup..."
 # (trap handles the cleanup of $TMP_BUILD_DIR)
 
-echo "Done! Output: ${OUTDIR}/${PACKAGE_NAME}_${DEB_VERSION}.deb"
+echo "Done! Output: ${DEB_FILE}"

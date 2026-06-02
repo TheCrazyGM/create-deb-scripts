@@ -40,7 +40,28 @@ cd "$TMPDIR/neovim"
 PKGVER=$(git describe --always | sed -e 's:-:.:g' -e 's:v::')
 COMMITS=$(git rev-list --count HEAD)
 DATE=$(git log -1 --date=short --pretty=format:%cd | sed 's:-:.:g' | sed 's:_:.:g')
-FULLVER="${COMMITS}.${PKGVER}.${DATE}"
+if [[ "$PKGVER" =~ ^(.*)\.([0-9]+)\.g([0-9a-f]+)$ ]]; then
+  UPSTREAM="${BASH_REMATCH[1]}"
+  HASH="${BASH_REMATCH[3]}"
+elif [[ "$PKGVER" =~ ^([0-9a-f]+)$ ]]; then
+  MAJOR=$(grep -oE 'set\(NVIM_VERSION_MAJOR [0-9]+\)' CMakeLists.txt | grep -oE '[0-9]+')
+  MINOR=$(grep -oE 'set\(NVIM_VERSION_MINOR [0-9]+\)' CMakeLists.txt | grep -oE '[0-9]+')
+  PATCH=$(grep -oE 'set\(NVIM_VERSION_PATCH [0-9]+\)' CMakeLists.txt | grep -oE '[0-9]+')
+  PRERELEASE=$(grep -oE 'set\(NVIM_VERSION_PRERELEASE "[^"]*"\)' CMakeLists.txt | cut -d'"' -f2 || true)
+  UPSTREAM="${MAJOR}.${MINOR}.${PATCH}${PRERELEASE}"
+  HASH="${BASH_REMATCH[1]}"
+else
+  UPSTREAM="$PKGVER"
+  HASH=""
+fi
+
+UPSTREAM="${UPSTREAM//-/\~}"
+
+if [[ -n "$HASH" ]]; then
+  FULLVER="${UPSTREAM}+git${DATE}.${HASH}"
+else
+  FULLVER="${UPSTREAM}+git${DATE}"
+fi
 SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
 export SOURCE_DATE_EPOCH
 

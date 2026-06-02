@@ -48,7 +48,24 @@ git submodule update --init --recursive
 PKGVER=$(git describe --tags --always | sed -e 's/^v//' -e 's/-/./g')
 COMMITS=$(git rev-list --count HEAD)
 DATE=$(git log -1 --date=short --pretty=format:%cd | sed 's/-/./g' | sed 's/_/./g')
-FULLVER="${COMMITS}.${PKGVER}.${DATE}"
+if [[ "$PKGVER" =~ ^(.*)\.([0-9]+)\.g([0-9a-f]+)$ ]]; then
+  UPSTREAM="${BASH_REMATCH[1]}"
+  HASH="${BASH_REMATCH[3]}"
+elif [[ "$PKGVER" =~ ^([0-9a-f]+)$ ]]; then
+  UPSTREAM=$(grep -m 1 -E '^version = ' alacritty/Cargo.toml | cut -d'"' -f2)
+  HASH="${BASH_REMATCH[1]}"
+else
+  UPSTREAM="$PKGVER"
+  HASH=""
+fi
+
+UPSTREAM="${UPSTREAM//-/\~}"
+
+if [[ -n "$HASH" ]]; then
+  FULLVER="${UPSTREAM}+git${DATE}.${HASH}"
+else
+  FULLVER="${UPSTREAM}+git${DATE}"
+fi
 SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
 export SOURCE_DATE_EPOCH
 
