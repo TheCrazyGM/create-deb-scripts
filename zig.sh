@@ -1,0 +1,154 @@
+#!/usr/bin/env bash
+set -euo pipefail
+umask 0022
+
+# Simple standalone Debian package builder for Zig (stable releases)
+# - Downloads pre-compiled Zig binary from ziglang.org
+# - Packages it under /usr/lib/zig/VERSION/ using the alternatives system
+
+die() {
+  echo "[ERROR] $*" >&2
+  exit 1
+}
+
+info() {
+  echo "[INFO]  $*"
+}
+
+OUTDIR=$(pwd)
+
+TMPDIR=$(mktemp -d -t makezig.XXXXXX)
+cleanup() {
+  if [[ -n "${TMPDIR:-}" && -d "${TMPDIR}" ]]; then
+    rm -rf "${TMPDIR}"
+  fi
+}
+trap cleanup EXIT INT TERM
+info "Using temp dir: ${TMPDIR}"
+
+for cmd in curl wget tar jq dpkg-deb; do
+  command -v "$cmd" >/dev/null 2>&1 || die "Missing required tool: $cmd"
+done
+
+# Version selection:
+# - If an argument is provided, use it as the version.
+# - Otherwise, query ziglang.org API for the latest stable release.
+if [ $# -ge 1 ]; then
+  VERSION="$1"
+  info "Using specified version: ${VERSION}"
+else
+  info "Querying latest stable version from ziglang.org..."
+  VERSION=$(curl -s https://ziglang.org/download/index.json | jq -r 'keys[]' | grep -v 'master' | sort -V | tail -n 1)
+  info "Latest stable version detected: ${VERSION}"
+fi
+
+ARCH=$(dpkg --print-architecture)
+case "$ARCH" in
+"amd64") ZIG_ARCH="x86_64" ;;
+"arm64") ZIG_ARCH="aarch64" ;;
+"armel") ZIG_ARCH="arm" ;;
+"riscv64") ZIG_ARCH="riscv64" ;;
+"ppc64el") ZIG_ARCH="powerpc64le" ;;
+"i386") ZIG_ARCH="x86" ;;
+"loong64") ZIG_ARCH="loongarch64" ;;
+"s390x") ZIG_ARCH="s390x" ;;
+*) die "Unsupported architecture: $ARCH" ;;
+esac
+
+MAJOR_MINOR=$(echo "$VERSION" | cut -d'.' -f1,2)
+PKGNAME="zig-${MAJOR_MINOR}"
+
+TARBALL="zig-${ZIG_ARCH}-linux-${VERSION}.tar.xz"
+DOWNLOAD_URL="https://ziglang.org/download/${VERSION}/${TARBALL}"
+
+DEB_NAME="${PKGNAME}_${VERSION}_${ARCH}.deb"
+DEB_FILE="${OUTDIR}/${DEB_NAME}"
+
+if [[ -f "$DEB_FILE" ]]; then
+  info "Package $(basename "$DEB_FILE") already exists."
+  if [[ -t 0 ]]; then
+    read -p "Do you want to rebuild it? [y/N] " -r response
+    if [[ ! "$response" =~ ^[Yy]$ ]]; then
+      info "Skipping build."
+      exit 0
+    fi
+  else
+    info "Non-interactive shell, skipping rebuild."
+    exit 0
+  fi
+fi
+
+info "Downloading Zig compiler: ${DOWNLOAD_URL}"
+wget -q "$DOWNLOAD_URL" -O "${TMPDIR}/zig.tar.xz"
+
+info "Extracting compiler..."
+tar -xf "${TMPDIR}/zig.tar.xz" -C "${TMPDIR}"
+
+PKGDIR="${TMPDIR}/pkg"
+mkdir -p "${PKGDIR}/usr/lib/zig/${VERSION}"
+
+info "Staging files..."
+cp "${TMPDIR}/zig-${ZIG_ARCH}-linux-${VERSION}/zig" "${PKGDIR}/usr/lib/zig/${VERSION}/"
+cp -r "${TMPDIR}/zig-${ZIG_ARCH}-linux-${VERSION}/lib" "${PKGDIR}/usr/lib/zig/${VERSION}/"
+
+# Document dir
+DOC_DIR="${PKGDIR}/usr/share/doc/${PKGNAME}"
+mkdir -p "${DOC_DIR}"
+if [[ -f "${TMPDIR}/zig-${ZIG_ARCH}-linux-${VERSION}/LICENSE" ]]; then
+  install -Dm644 "${TMPDIR}/zig-${ZIG_ARCH}-linux-${VERSION}/LICENSE" "${DOC_DIR}/copyright"
+fi
+if [[ -f "${TMPDIR}/zig-${ZIG_ARCH}-linux-${VERSION}/README.md" ]]; then
+  install -Dm644 "${TMPDIR}/zig-${ZIG_ARCH}-linux-${VERSION}/README.md" "${DOC_DIR}/README.md"
+fi
+
+# Create DEBIAN metadata control
+mkdir -p "${PKGDIR}/DEBIAN"
+
+cat >"${PKGDIR}/DEBIAN/control" <<EOF
+Package: ${PKGNAME}
+Version: ${VERSION}
+Section: devel
+Priority: optional
+Architecture: ${ARCH}
+Maintainer: Michael Garcia <thecrazygm@gmail.com>
+Description: Zig is a general-purpose programming language and toolchain
+Homepage: https://ziglang.org/
+Provides: zig
+EOF
+
+# Install system postinst script for alternatives management
+cat >"${PKGDIR}/DEBIAN/postinst" <<EOF
+#!/bin/sh
+set -e
+ZIG_BIN="/usr/lib/zig/${VERSION}/zig"
+if [ -f "\$ZIG_BIN" ]; then
+    update-alternatives --install /usr/bin/zig zig "\$ZIG_BIN" 100
+fi
+exit 0
+EOF
+chmod 755 "${PKGDIR}/DEBIAN/postinst"
+
+# Install system prerm script for alternatives management
+cat >"${PKGDIR}/DEBIAN/prerm" <<EOF
+#!/bin/sh
+set -e
+ZIG_BIN="/usr/lib/zig/${VERSION}/zig"
+if [ -f "\$ZIG_BIN" ]; then
+    update-alternatives --remove zig "\$ZIG_BIN" || true
+fi
+exit 0
+EOF
+chmod 755 "${PKGDIR}/DEBIAN/prerm"
+
+# Normalize metadata timestamps
+SOURCE_DATE_EPOCH=$(date +%s)
+export SOURCE_DATE_EPOCH
+
+find "${PKGDIR}" -exec touch -h -d @"${SOURCE_DATE_EPOCH}" {} +
+chmod -R a+rX "${PKGDIR}"
+chmod 0755 "${PKGDIR}/DEBIAN" || true
+chmod 0644 "${PKGDIR}/DEBIAN/control"
+
+dpkg-deb --build --root-owner-group "${PKGDIR}" "${DEB_FILE}"
+
+info "Done! Output: ${DEB_FILE}"
