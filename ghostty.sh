@@ -95,7 +95,11 @@ COMMITS=$(git rev-list --count HEAD)
 DATE=$(git log -1 --date=short --pretty=format:%cd | sed 's/-/./g' | sed 's/_/./g')
 ZON_VER=$(grep -m 1 -oP '\.version\s*=\s*"\K[^"]+' build.zig.zon || echo "1.0.0")
 
-if [[ "$PKGVER" =~ ^[0-9] ]]; then
+# A shallow clone with no tags makes `git describe --always` return the
+# abbreviated commit hash. Hashes can start with a digit, so checking only
+# the first character incorrectly sends values such as `88b4cd0` to Zig as a
+# version string. Require a semantic-version-like numeric prefix instead.
+if [[ "$PKGVER" =~ ^[0-9]+\.[0-9]+ ]]; then
   if [[ "$PKGVER" =~ ^(.*)\.([0-9]+)\.g([0-9a-f]+)$ ]]; then
     UPSTREAM="${BASH_REMATCH[1]}"
     HASH="${BASH_REMATCH[3]}"
