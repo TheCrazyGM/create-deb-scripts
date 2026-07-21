@@ -47,85 +47,27 @@ arm64)
 esac
 
 # === DYNAMICALLY FETCH LATEST TARBALL URL ===
-info "Fetching releases page to find JavaScript bundle..."
-html_content=$(curl -sL --compressed "$RELEASES_PAGE_URL" || curl -sL --compressed "https://antigravity.google/download")
-MAIN_JS=$(echo "$html_content" | grep -oE 'main-[a-zA-Z0-9]+\.js' | head -n 1)
+info "Fetching download page to find latest release..."
+html_content=$(curl -sL --compressed "https://antigravity.google/download" || curl -sL --compressed "https://antigravity.google/releases")
 
-if [ -z "$MAIN_JS" ]; then
-  die "Failed to locate main JavaScript bundle on the releases page."
-fi
+TARBALL_URL=$(echo "$html_content" | grep -oP 'https://storage.googleapis.com/antigravity-public/antigravity-hub/[^/]+/'"$ARCH_SUFFIX"'/Antigravity\.tar\.gz' | head -n 1 || true)
 
-info "Fetching JavaScript bundle: $MAIN_JS..."
-curl -sL --compressed -o "$TEMP_JS" "$BASE_URL/$MAIN_JS"
-
-info "Parsing download URL and version from JavaScript bundle..."
-DOWNLOAD_FIELDS=$(python3 - "$TEMP_JS" "$ARCH_SUFFIX" <<'PY'
-import sys, re, pathlib
-bundle_path = sys.argv[1]
-platform = sys.argv[2]
-bundle = pathlib.Path(bundle_path).read_text(encoding="utf-8", errors="ignore")
-
-# Method 1: Section-based search (from website config structure)
-start = bundle.find('id:"antigravity-2"')
-end = bundle.find('},{name:"command",id:"antigravity-cli"', start)
-if start != -1 and end != -1:
-    section = bundle[start:end]
-    match = re.search(r'href:"([^"]+/' + re.escape(platform) + r'/Antigravity\.tar\.gz)"', section)
-    if match:
-        url = match.group(1)
-        version_match = re.search(r'/antigravity-hub/([^/]+)/', url)
-        if version_match:
-            print(f"{version_match.group(1)} {url}")
-            sys.exit(0)
-
-# Method 2: Global URL search fallback
-match = re.search(r'href:"(https://storage\.googleapis\.com/antigravity-public/antigravity-hub/[0-9a-zA-Z.-]+/' + re.escape(platform) + r'/Antigravity\.tar\.gz)"', bundle)
-if match:
-    url = match.group(1)
-    version_match = re.search(r'/antigravity-hub/([^/]+)/', url)
-    if version_match:
-        print(f"{version_match.group(1)} {url}")
-        sys.exit(0)
-
-sys.exit(1)
-PY
-)
-
-TARBALL_URL=""
-VERSION=""
-
-if [ -n "$DOWNLOAD_FIELDS" ]; then
-  VERSION=$(echo "$DOWNLOAD_FIELDS" | cut -d' ' -f1)
-  TARBALL_URL=$(echo "$DOWNLOAD_FIELDS" | cut -d' ' -f2)
-  info "Found version $VERSION from JS bundle."
-else
-  # Try to extract API URL from JS bundle
-  API_URL=$(echo "$js_content" | grep -oE 'https://antigravity-auto-updater-[0-9a-zA-Z.-]+\.run\.app/releases' | head -n 1 || true)
-  if [ -n "$API_URL" ]; then
-    info "Querying auto-updater API: $API_URL..."
-    api_response=$(curl -sL "$API_URL" || true)
-    if [ -n "$api_response" ]; then
-      VERSION_VAL=$(echo "$api_response" | jq -r '.[0].version' 2>/dev/null || true)
-      EXEC_ID=$(echo "$api_response" | jq -r '.[0].execution_id' 2>/dev/null || true)
-      if [ -n "$VERSION_VAL" ] && [ "$VERSION_VAL" != "null" ] && [ -n "$EXEC_ID" ] && [ "$EXEC_ID" != "null" ]; then
-        VERSION="${VERSION_VAL}-${EXEC_ID}"
-        TARBALL_URL="https://storage.googleapis.com/antigravity-public/antigravity-hub/${VERSION}/${ARCH_SUFFIX}/Antigravity.tar.gz"
-        info "Found version $VERSION from API."
-      fi
-    fi
-  fi
+if [ -z "$TARBALL_URL" ]; then
+  # Fallback: regex search in HTML for storage url
+  TARBALL_URL=$(echo "$html_content" | grep -oE "https://storage\.googleapis\.com/antigravity-public/antigravity-hub/[0-9a-zA-Z.-]+/${ARCH_SUFFIX}/Antigravity\.tar\.gz" | head -n 1 || true)
 fi
 
 if [ -z "$TARBALL_URL" ]; then
-  info "Fallback: locating download URL directly in JavaScript bundle..."
-  TARBALL_URL=$(echo "$js_content" | grep -oE "https://storage\.googleapis\.com/antigravity-public/antigravity-hub/[0-9a-zA-Z.-]+/${ARCH_SUFFIX}/Antigravity\.tar\.gz" | head -n 1 || true)
-  if [ -z "$TARBALL_URL" ]; then
-    die "Tarball URL for $ARCH ($ARCH_SUFFIX) not found."
-  fi
+  die "Failed to locate Antigravity download URL on the website."
+fi
+
+VERSION=$(echo "$TARBALL_URL" | grep -oP 'antigravity-hub/\K[^/]+' || true)
+if [ -z "$VERSION" ]; then
   VERSION=$(echo "$TARBALL_URL" | sed -n "s|.*/antigravity-hub/\([^/]*\)/${ARCH_SUFFIX}/.*|\1|p")
-  if [ -z "$VERSION" ]; then
-    die "Failed to extract version from URL: $TARBALL_URL"
-  fi
+fi
+
+if [ -z "$VERSION" ]; then
+  die "Failed to extract version from URL: $TARBALL_URL"
 fi
 
 DEB_VERSION="$VERSION"
