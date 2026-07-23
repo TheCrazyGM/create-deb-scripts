@@ -3,7 +3,7 @@ set -euo pipefail
 umask 0022
 
 # Simple standalone Debian package builder for Ghostty (git)
-# - Clones ghostty, installs Zig 0.15.2 if needed, builds, stages, and compiles a .deb
+# - Clones ghostty, installs Zig 0.16.0 if needed, builds, stages, and compiles a .deb
 
 die() {
   echo "[ERROR] $*" >&2
@@ -61,17 +61,17 @@ fi
 ZIG_CMD=""
 if command -v zig >/dev/null 2>&1; then
   ZIG_VER=$(zig version 2>/dev/null || echo "0.0.0")
-  if [[ "$ZIG_VER" == 0.15.* ]]; then
+  if [[ "$ZIG_VER" == 0.16.* ]]; then
     ZIG_CMD="zig"
   fi
 fi
 
 if [[ -z "$ZIG_CMD" ]]; then
-  for path in /usr/lib/zig/0.15.*/zig /usr/local/bin/zig /usr/bin/zig; do
+  for path in /usr/lib/zig/0.16.*/zig /usr/local/bin/zig /usr/bin/zig; do
     if [[ -x "$path" ]]; then
       VER=$("$path" version 2>/dev/null || echo "0.0.0")
-      if [[ "$VER" == 0.15.* ]]; then
-        info "Found local Zig 0.15.x at: $path"
+      if [[ "$VER" == 0.16.* ]]; then
+        info "Found local Zig 0.16.x at: $path"
         ZIG_CMD="$path"
         break
       fi
@@ -80,11 +80,11 @@ if [[ -z "$ZIG_CMD" ]]; then
 fi
 
 if [[ -z "$ZIG_CMD" ]]; then
-  info "System zig is not 0.15.x and no local 0.15.x binary was found."
-  info "Downloading Zig 0.15.2 compiler locally..."
-  wget -q https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz -O "${TMPDIR}/zig.tar.xz"
+  info "System zig is not 0.16.x and no local 0.16.x binary was found."
+  info "Downloading Zig 0.16.0 compiler locally..."
+  wget -q https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz -O "${TMPDIR}/zig.tar.xz"
   tar -xf "${TMPDIR}/zig.tar.xz" -C "${TMPDIR}"
-  ZIG_CMD="${TMPDIR}/zig-x86_64-linux-0.15.2/zig"
+  ZIG_CMD="${TMPDIR}/zig-x86_64-linux-0.16.0/zig"
 fi
 
 git clone --depth=1 https://github.com/ghostty-org/ghostty.git "${TMPDIR}/ghostty"
