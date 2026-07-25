@@ -23,6 +23,7 @@ TEMP_JS="$TMP_BUILD_DIR/main_js_temp.js"
 
 RELEASES_PAGE_URL="https://antigravity.google/releases"
 BASE_URL="https://antigravity.google"
+RELEASES_API_URL="https://antigravity-hub-auto-updater-974169037036.us-central1.run.app/releases"
 
 # === CHECK DEPENDENCIES ===
 command_exist() { command -v "$1" >/dev/null 2>&1; }
@@ -50,7 +51,25 @@ esac
 info "Fetching download page to find latest release..."
 html_content=$(curl -sL --compressed "https://antigravity.google/download" || curl -sL --compressed "https://antigravity.google/releases")
 
-TARBALL_URL=$(echo "$html_content" | grep -oP 'https://storage.googleapis.com/antigravity-public/antigravity-hub/[^/]+/'"$ARCH_SUFFIX"'/Antigravity\.tar\.gz' | head -n 1 || true)
+TARBALL_URL=""
+VERSION=""
+
+# The Astro page renders fallback data first, then refreshes it from the
+# updater API. Query the same API so a newer release is not missed when the
+# page's static HTML is stale.
+api_response=$(curl -fsSL "$RELEASES_API_URL" 2>/dev/null || true)
+if [ -n "$api_response" ]; then
+  VERSION_VAL=$(echo "$api_response" | jq -r '.[0].version // empty' 2>/dev/null || true)
+  EXEC_ID=$(echo "$api_response" | jq -r '.[0].execution_id // empty' 2>/dev/null || true)
+  if [ -n "$VERSION_VAL" ] && [ -n "$EXEC_ID" ]; then
+    VERSION="${VERSION_VAL}-${EXEC_ID}"
+    TARBALL_URL="https://storage.googleapis.com/antigravity-public/antigravity-hub/${VERSION}/${ARCH_SUFFIX}/Antigravity.tar.gz"
+  fi
+fi
+
+if [ -z "$TARBALL_URL" ]; then
+  TARBALL_URL=$(echo "$html_content" | grep -oP 'https://storage.googleapis.com/antigravity-public/antigravity-hub/[^/]+/'"$ARCH_SUFFIX"'/Antigravity\.tar\.gz' | head -n 1 || true)
+fi
 
 if [ -z "$TARBALL_URL" ]; then
   # Fallback: regex search in HTML for storage url
@@ -61,9 +80,11 @@ if [ -z "$TARBALL_URL" ]; then
   die "Failed to locate Antigravity download URL on the website."
 fi
 
-VERSION=$(echo "$TARBALL_URL" | grep -oP 'antigravity-hub/\K[^/]+' || true)
 if [ -z "$VERSION" ]; then
-  VERSION=$(echo "$TARBALL_URL" | sed -n "s|.*/antigravity-hub/\([^/]*\)/${ARCH_SUFFIX}/.*|\1|p")
+  VERSION=$(echo "$TARBALL_URL" | grep -oP 'antigravity-hub/\K[^/]+' || true)
+  if [ -z "$VERSION" ]; then
+    VERSION=$(echo "$TARBALL_URL" | sed -n "s|.*/antigravity-hub/\([^/]*\)/${ARCH_SUFFIX}/.*|\1|p")
+  fi
 fi
 
 if [ -z "$VERSION" ]; then
