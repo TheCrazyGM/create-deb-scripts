@@ -113,7 +113,7 @@ mv "$TMP_BUILD_DIR"/zen/* "$INSTALL_DIR"
 info "Creating wrapper script..."
 cat <<EOF >"$BIN_DIR/zen"
 #!/bin/bash
-/opt/zen/zen "\$@"
+exec /opt/zen/zen "\$@"
 EOF
 chmod +x "$BIN_DIR/zen"
 
