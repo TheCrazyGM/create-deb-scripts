@@ -33,6 +33,11 @@ for cmd in curl wget grep sed dpkg-deb; do
   command -v "$cmd" >/dev/null 2>&1 || die "Missing required tool: $cmd"
 done
 
+ARCH=$(dpkg --print-architecture)
+if [[ "$ARCH" != "amd64" ]]; then
+  die "Upstream publishes Scribus development AppImages for x86_64 only; unsupported architecture: $ARCH"
+fi
+
 info "Fetching latest release details from SourceForge RSS feed..."
 RSS_URL="https://sourceforge.net/projects/scribus/rss?path=/scribus-devel"
 APPIMAGE_URL=$(curl -s "$RSS_URL" | \
@@ -108,7 +113,23 @@ fi
 # Document dir
 DOC_DIR="${PKGDIR}/usr/share/doc/scribus-devel"
 mkdir -p "${DOC_DIR}"
-echo "Scribus Development Version packaged as a Debian package wrapping the official AppImage." > "${DOC_DIR}/copyright"
+LICENSE_FILE=""
+for candidate in LICENSE COPYING LICENSE.txt COPYING.txt; do
+  if [[ -f "${BUILD_TMP}/squashfs-root/${candidate}" ]]; then
+    LICENSE_FILE="${BUILD_TMP}/squashfs-root/${candidate}"
+    break
+  fi
+done
+if [[ -n "$LICENSE_FILE" ]]; then
+  cp "${LICENSE_FILE}" "${DOC_DIR}/copyright"
+else
+  cat >"${DOC_DIR}/copyright" <<'EOT'
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Source: https://sourceforge.net/projects/scribus/files/scribus-devel/
+License: GPL-2.0+
+ Scribus is licensed under the GNU General Public License version 2 or later.
+EOT
+fi
 
 # Create DEBIAN control metadata
 mkdir -p "${PKGDIR}/DEBIAN"
@@ -116,7 +137,6 @@ PKGNAME="scribus-devel"
 PKGDESC="Scribus page layout and publication (development version)"
 MAINTAINER="Michael Garcia <thecrazygm@gmail.com>"
 URL="https://www.scribus.net/"
-ARCH=$(dpkg --print-architecture)
 
 cat >"${PKGDIR}/DEBIAN/control" <<EOF
 Package: ${PKGNAME}
