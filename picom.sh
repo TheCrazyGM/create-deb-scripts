@@ -79,7 +79,6 @@ if [[ -f "$DEB_FILE" ]]; then
   fi
 fi
 
-
 # Runtime deps approximation for a standard Picom build
 # Adjust as needed if enabling/disabling specific features
 DEPENDS="libc6, libconfig11, libdbus-1-3, libegl1, libepoxy0, libev4, libgl1, libpcre2-8-0, libpixman-1-0, libx11-6, libx11-xcb1, libxcb-composite0, libxcb-damage0, libxcb-glx0, libxcb-image0, libxcb-present0, libxcb-randr0, libxcb-render0, libxcb-shape0, libxcb-sync1, libxcb-xfixes0, libxcb-xinerama0, libxcb1, libxext6"

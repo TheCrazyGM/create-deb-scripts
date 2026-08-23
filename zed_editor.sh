@@ -32,16 +32,16 @@ done
 
 # === MAP ARCH TO TARBALL NAME ===
 case "$ARCH" in
-amd64)
-  TARBALL="zed-linux-x86_64.tar.gz"
-  ;;
-arm64)
-  TARBALL="zed-linux-aarch64.tar.gz"
-  ;;
-*)
-  echo "Error: Unsupported architecture: $ARCH" >&2
-  exit 1
-  ;;
+  amd64)
+    TARBALL="zed-linux-x86_64.tar.gz"
+    ;;
+  arm64)
+    TARBALL="zed-linux-aarch64.tar.gz"
+    ;;
+  *)
+    echo "Error: Unsupported architecture: $ARCH" >&2
+    exit 1
+    ;;
 esac
 
 # === FETCH LATEST RELEASE ===

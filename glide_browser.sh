@@ -32,15 +32,15 @@ done
 
 # === MAP ARCH TO TARBALL NAME ===
 case "$ARCH" in
-amd64)
-  TARBALL="glide.linux-x86_64.tar.xz"
-  ;;
-arm64)
-  TARBALL="glide.linux-aarch64.tar.xz"
-  ;;
-*)
-  die "Unsupported architecture: $ARCH"
-  ;;
+  amd64)
+    TARBALL="glide.linux-x86_64.tar.xz"
+    ;;
+  arm64)
+    TARBALL="glide.linux-aarch64.tar.xz"
+    ;;
+  *)
+    die "Unsupported architecture: $ARCH"
+    ;;
 esac
 
 # === FETCH LATEST RELEASE ===

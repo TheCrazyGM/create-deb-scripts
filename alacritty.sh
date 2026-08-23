@@ -91,7 +91,6 @@ if [[ -f "$DEB_FILE" ]]; then
   fi
 fi
 
-
 # Dependencies based on INSTALL.md and typical usage
 # Build deps: cmake, pkg-config, libfreetype6-dev, libfontconfig1-dev, libxcb-xfixes0-dev, libxkbcommon-dev
 # Runtime deps:
@@ -122,14 +121,14 @@ install -Dm644 "extra/logo/alacritty-term.svg" "${PKGDIR}/usr/share/pixmaps/Alac
 
 # 4. Man Pages (requires scdoc)
 if [ "$HAS_SCDOC" = true ]; then
-    info "Generating and installing man pages"
-    mkdir -p "${PKGDIR}/usr/share/man/man1"
-    mkdir -p "${PKGDIR}/usr/share/man/man5"
-    
-    scdoc < extra/man/alacritty.1.scd | gzip -c > "${PKGDIR}/usr/share/man/man1/alacritty.1.gz"
-    scdoc < extra/man/alacritty-msg.1.scd | gzip -c > "${PKGDIR}/usr/share/man/man1/alacritty-msg.1.gz"
-    scdoc < extra/man/alacritty.5.scd | gzip -c > "${PKGDIR}/usr/share/man/man5/alacritty.5.gz"
-    scdoc < extra/man/alacritty-bindings.5.scd | gzip -c > "${PKGDIR}/usr/share/man/man5/alacritty-bindings.5.gz"
+  info "Generating and installing man pages"
+  mkdir -p "${PKGDIR}/usr/share/man/man1"
+  mkdir -p "${PKGDIR}/usr/share/man/man5"
+
+  scdoc <extra/man/alacritty.1.scd | gzip -c >"${PKGDIR}/usr/share/man/man1/alacritty.1.gz"
+  scdoc <extra/man/alacritty-msg.1.scd | gzip -c >"${PKGDIR}/usr/share/man/man1/alacritty-msg.1.gz"
+  scdoc <extra/man/alacritty.5.scd | gzip -c >"${PKGDIR}/usr/share/man/man5/alacritty.5.gz"
+  scdoc <extra/man/alacritty-bindings.5.scd | gzip -c >"${PKGDIR}/usr/share/man/man5/alacritty-bindings.5.gz"
 fi
 
 # 5. Shell Completions
@@ -156,7 +155,6 @@ fi
 if [[ -f README.md ]]; then
   install -Dm644 README.md "${DOC_DIR}/README.md"
 fi
-
 
 # --- Packaging ---
 

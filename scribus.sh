@@ -40,9 +40,9 @@ fi
 
 info "Fetching latest release details from SourceForge RSS feed..."
 RSS_URL="https://sourceforge.net/projects/scribus/rss?path=/scribus-devel"
-APPIMAGE_URL=$(curl -s "$RSS_URL" | \
-  grep -oP 'https://sourceforge.net/projects/scribus/files/scribus-devel/[^/]+/scribus-[0-9.]+-linux-x86_64\.AppImage/download' | \
-  head -n 1)
+APPIMAGE_URL=$(curl -s "$RSS_URL" \
+  | grep -oP 'https://sourceforge.net/projects/scribus/files/scribus-devel/[^/]+/scribus-[0-9.]+-linux-x86_64\.AppImage/download' \
+  | head -n 1)
 
 if [[ -z "$APPIMAGE_URL" ]]; then
   die "Could not find Scribus AppImage download URL in the SourceForge RSS feed."

@@ -56,15 +56,15 @@ fi
 
 ARCH=$(dpkg --print-architecture)
 case "$ARCH" in
-"amd64") ZIG_ARCH="x86_64" ;;
-"arm64") ZIG_ARCH="aarch64" ;;
-"armel") ZIG_ARCH="arm" ;;
-"riscv64") ZIG_ARCH="riscv64" ;;
-"ppc64el") ZIG_ARCH="powerpc64le" ;;
-"i386") ZIG_ARCH="x86" ;;
-"loong64") ZIG_ARCH="loongarch64" ;;
-"s390x") ZIG_ARCH="s390x" ;;
-*) die "Unsupported architecture: $ARCH" ;;
+  "amd64") ZIG_ARCH="x86_64" ;;
+  "arm64") ZIG_ARCH="aarch64" ;;
+  "armel") ZIG_ARCH="arm" ;;
+  "riscv64") ZIG_ARCH="riscv64" ;;
+  "ppc64el") ZIG_ARCH="powerpc64le" ;;
+  "i386") ZIG_ARCH="x86" ;;
+  "loong64") ZIG_ARCH="loongarch64" ;;
+  "s390x") ZIG_ARCH="s390x" ;;
+  *) die "Unsupported architecture: $ARCH" ;;
 esac
 
 MAJOR_MINOR=$(echo "$VERSION" | cut -d'.' -f1,2)

@@ -32,16 +32,16 @@ done
 
 # === MAP ARCH TO URL SEGMENT ===
 case "$ARCH" in
-amd64)
-  ARCH_SUFFIX="linux-x64"
-  ;;
-arm64)
-  ARCH_SUFFIX="linux-arm"
-  ;;
-*)
-  echo "Error: Unsupported architecture: $ARCH" >&2
-  exit 1
-  ;;
+  amd64)
+    ARCH_SUFFIX="linux-x64"
+    ;;
+  arm64)
+    ARCH_SUFFIX="linux-arm"
+    ;;
+  *)
+    echo "Error: Unsupported architecture: $ARCH" >&2
+    exit 1
+    ;;
 esac
 
 # === DYNAMICALLY FETCH LATEST TARBALL URL ===
