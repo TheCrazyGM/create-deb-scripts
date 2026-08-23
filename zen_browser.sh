@@ -113,7 +113,7 @@ mv "$TMP_BUILD_DIR"/zen/* "$INSTALL_DIR"
 info "Creating wrapper script..."
 cat <<EOF >"$BIN_DIR/zen"
 #!/bin/bash
-/opt/zen/zen "\$@"
+exec /opt/zen/zen "\$@"
 EOF
 chmod +x "$BIN_DIR/zen"
 
@@ -175,6 +175,7 @@ Priority: optional
 Architecture: $ARCH
 Maintainer: Michael Garcia <thecrazygm@gmail.com>
 Description: Zen Browser - A privacy-focused browser that helps you browse in peace.
+Depends: ca-certificates, libasound2t64 | libasound2, libc6, libdbus-glib-1-2, libgtk-3-0, libstdc++6, libxtst6, xdg-utils
 EOF
 
 # === POSTINST TO UPDATE ICON CACHE ===
@@ -182,7 +183,7 @@ cat <<'EOF' >"$BUILD_DIR/DEBIAN/postinst"
 #!/bin/bash
 set -e
 if command -v gtk-update-icon-cache &>/dev/null; then
-  gtk-update-icon-cache -f /usr/share/icons/hicolor
+  gtk-update-icon-cache -f /usr/share/icons/hicolor || true
 fi
 if command -v update-desktop-database &>/dev/null; then
   update-desktop-database -q /usr/share/applications || true

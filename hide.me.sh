@@ -16,29 +16,30 @@ info() {
 
 OUTDIR=$(pwd)
 
-TMPDIR=$(mktemp -d -t makehideme.XXXXXX)
+BUILD_TMP=$(mktemp -d -t makehideme.XXXXXX)
 cleanup() {
-  if [[ -n "${TMPDIR:-}" && -d "${TMPDIR}" ]]; then
-    rm -rf "${TMPDIR}"
+  if [[ -n "${BUILD_TMP:-}" && -d "${BUILD_TMP}" ]]; then
+    rm -rf "${BUILD_TMP}"
   fi
 }
-trap cleanup EXIT INT TERM
-info "Using temp dir: ${TMPDIR}"
+trap cleanup EXIT
+# Signal traps exit so the EXIT trap (and cleanup) runs exactly once.
+trap 'exit 130' INT
+trap 'exit 143' TERM
+info "Using temp dir: ${BUILD_TMP}"
 
 for cmd in git go dpkg-deb; do
   command -v "$cmd" >/dev/null 2>&1 || die "Missing required tool: $cmd"
 done
 
-git clone --depth=1 https://github.com/eventure/hide.client.linux.git "${TMPDIR}/hide.client.linux"
-cd "${TMPDIR}/hide.client.linux"
+git clone --depth=1 https://github.com/eventure/hide.client.linux.git "${BUILD_TMP}/hide.client.linux"
+cd "${BUILD_TMP}/hide.client.linux"
 
 PKGVER=$(git describe --tags --always | sed -e 's/^v//' -e 's/-/./g')
-COMMITS=$(git rev-list --count HEAD)
 DATE=$(git log -1 --date=short --pretty=format:%cd | sed 's/-/./g' | sed 's/_/./g')
-if [[ "$PKGVER" =~ ^(.*)\.([0-9]+)\.g([0-9a-f]+)$ ]]; then
-  UPSTREAM="${BASH_REMATCH[1]}"
-  HASH="${BASH_REMATCH[3]}"
-elif [[ "$PKGVER" =~ ^([0-9a-f]+)$ ]]; then
+# Depth-1 clones fetch no tags, so git describe always falls back to a
+# short commit hash; the upstream version comes from project metadata.
+if [[ "$PKGVER" =~ ^([0-9a-f]+)$ ]]; then
   UPSTREAM=$(grep -oE 'writer\.Write\( \[\]byte\( "[0-9.]+" \) \)' control/methods.go | cut -d'"' -f2 || echo "0.0.0")
   HASH="${BASH_REMATCH[1]}"
 else
@@ -81,7 +82,7 @@ fi
 info "Building hide.me CLI VPN client"
 go build -o hide.me
 
-PKGDIR="${TMPDIR}/pkg"
+PKGDIR="${BUILD_TMP}/pkg"
 mkdir -p "${PKGDIR}/opt/hide.me"
 mkdir -p "${PKGDIR}/usr/bin"
 mkdir -p "${PKGDIR}/lib/systemd/system"
@@ -89,7 +90,6 @@ mkdir -p "${PKGDIR}/lib/systemd/system"
 info "Staging install"
 cp hide.me CA.pem hide.me@.service config "${PKGDIR}/opt/hide.me"
 chmod +x "${PKGDIR}/opt/hide.me/hide.me"
-touch "${PKGDIR}/opt/hide.me/config"
 
 # Create symlink for the binary to /usr/bin/hide.me
 ln -sf /opt/hide.me/hide.me "${PKGDIR}/usr/bin/hide.me"

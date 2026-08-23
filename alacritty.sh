@@ -16,14 +16,17 @@ info() {
 
 OUTDIR=$(pwd)
 
-TMPDIR=$(mktemp -d -t makealacritty.XXXXXX)
+BUILD_TMP=$(mktemp -d -t makealacritty.XXXXXX)
 cleanup() {
-  if [[ -n "${TMPDIR:-}" && -d "${TMPDIR}" ]]; then
-    rm -rf "${TMPDIR}"
+  if [[ -n "${BUILD_TMP:-}" && -d "${BUILD_TMP}" ]]; then
+    rm -rf "${BUILD_TMP}"
   fi
 }
-trap cleanup EXIT INT TERM
-info "Using temp dir: ${TMPDIR}"
+trap cleanup EXIT
+# Signal traps exit so the EXIT trap (and cleanup) runs exactly once.
+trap 'exit 130' INT
+trap 'exit 143' TERM
+info "Using temp dir: ${BUILD_TMP}"
 
 # Check for required tools
 # Note: scdoc is optional but recommended for man pages.
@@ -40,18 +43,16 @@ else
   info "scdoc not found, man pages will NOT be generated."
 fi
 
-git clone --depth=1 https://github.com/alacritty/alacritty.git "${TMPDIR}/alacritty"
-cd "${TMPDIR}/alacritty"
+git clone --depth=1 https://github.com/alacritty/alacritty.git "${BUILD_TMP}/alacritty"
+cd "${BUILD_TMP}/alacritty"
 git submodule update --init --recursive
 
 # Versioning strategy
 PKGVER=$(git describe --tags --always | sed -e 's/^v//' -e 's/-/./g')
-COMMITS=$(git rev-list --count HEAD)
 DATE=$(git log -1 --date=short --pretty=format:%cd | sed 's/-/./g' | sed 's/_/./g')
-if [[ "$PKGVER" =~ ^(.*)\.([0-9]+)\.g([0-9a-f]+)$ ]]; then
-  UPSTREAM="${BASH_REMATCH[1]}"
-  HASH="${BASH_REMATCH[3]}"
-elif [[ "$PKGVER" =~ ^([0-9a-f]+)$ ]]; then
+# Depth-1 clones fetch no tags, so git describe always falls back to a
+# short commit hash; the upstream version comes from project metadata.
+if [[ "$PKGVER" =~ ^([0-9a-f]+)$ ]]; then
   UPSTREAM=$(grep -m 1 -E '^version = ' alacritty/Cargo.toml | cut -d'"' -f2)
   HASH="${BASH_REMATCH[1]}"
 else
@@ -99,7 +100,7 @@ DEPENDS="libc6, libfontconfig1, libfreetype6, libxcb1, libxcb-render0, libxcb-sh
 info "Building Alacritty (release)"
 cargo build --release --locked
 
-PKGDIR="${TMPDIR}/pkg"
+PKGDIR="${BUILD_TMP}/pkg"
 mkdir -p "${PKGDIR}"
 
 # --- Installation ---

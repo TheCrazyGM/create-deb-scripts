@@ -150,7 +150,7 @@ Priority: optional
 Architecture: $ARCH
 Maintainer: Michael Garcia <thecrazygm@gmail.com>
 Description: Zed Editor - A fast, collaborative code editor.
-Depends: libc6 (>= 2.31), libglib2.0-0 (>= 2.56), libgtk-3-0 (>= 3.24), libx11-6, libxcb1, libnss3, libxss1, libasound2, libxdamage1, libxcomposite1, libxrandr2, libxtst6, ca-certificates
+Depends: libc6 (>= 2.31), libglib2.0-0 (>= 2.56), libgtk-3-0 (>= 3.24), libx11-6, libxcb1, libnss3, libxss1, libasound2t64 | libasound2, libxdamage1, libxcomposite1, libxrandr2, libxtst6, ca-certificates
 Recommends: libvulkan1, mesa-vulkan-drivers
 EOF
 
@@ -159,7 +159,7 @@ cat <<'EOF' >"$BUILD_DIR/DEBIAN/postinst"
 #!/bin/bash
 set -e
 if command -v gtk-update-icon-cache &>/dev/null; then
-  gtk-update-icon-cache -f /usr/share/icons/hicolor
+  gtk-update-icon-cache -f /usr/share/icons/hicolor || true
 fi
 if command -v update-desktop-database &>/dev/null; then
   update-desktop-database -q /usr/share/applications || true

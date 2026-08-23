@@ -16,18 +16,23 @@ info() {
 
 OUTDIR=$(pwd)
 
-TMPDIR=$(mktemp -d -t makeghostty.XXXXXX)
+BUILD_TMP=$(mktemp -d -t makeghostty.XXXXXX)
 cleanup() {
-  if [[ -n "${TMPDIR:-}" && -d "${TMPDIR}" ]]; then
-    rm -rf "${TMPDIR}"
+  if [[ -n "${BUILD_TMP:-}" && -d "${BUILD_TMP}" ]]; then
+    rm -rf "${BUILD_TMP}"
   fi
 }
-trap cleanup EXIT INT TERM
-info "Using temp dir: ${TMPDIR}"
+trap cleanup EXIT
+# Signal traps exit so the EXIT trap (and cleanup) runs exactly once.
+trap 'exit 130' INT
+trap 'exit 143' TERM
+info "Using temp dir: ${BUILD_TMP}"
 
 for cmd in git dpkg-deb pkg-config wget tar; do
   command -v "$cmd" >/dev/null 2>&1 || die "Missing required tool: $cmd"
 done
+
+ARCH=$(dpkg --print-architecture)
 
 # Check build dependencies
 MISSING_DEPS=()
@@ -80,18 +85,22 @@ if [[ -z "$ZIG_CMD" ]]; then
 fi
 
 if [[ -z "$ZIG_CMD" ]]; then
+  case "$ARCH" in
+    amd64) ZIG_ARCH="x86_64" ;;
+    arm64) ZIG_ARCH="aarch64" ;;
+    *) die "No prebuilt Zig 0.16.0 toolchain available for architecture: $ARCH" ;;
+  esac
   info "System zig is not 0.16.x and no local 0.16.x binary was found."
-  info "Downloading Zig 0.16.0 compiler locally..."
-  wget -q https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz -O "${TMPDIR}/zig.tar.xz"
-  tar -xf "${TMPDIR}/zig.tar.xz" -C "${TMPDIR}"
-  ZIG_CMD="${TMPDIR}/zig-x86_64-linux-0.16.0/zig"
+  info "Downloading Zig 0.16.0 compiler for ${ZIG_ARCH}..."
+  wget -q "https://ziglang.org/download/0.16.0/zig-${ZIG_ARCH}-linux-0.16.0.tar.xz" -O "${BUILD_TMP}/zig.tar.xz"
+  tar -xf "${BUILD_TMP}/zig.tar.xz" -C "${BUILD_TMP}"
+  ZIG_CMD="${BUILD_TMP}/zig-${ZIG_ARCH}-linux-0.16.0/zig"
 fi
 
-git clone --depth=1 https://github.com/ghostty-org/ghostty.git "${TMPDIR}/ghostty"
-cd "${TMPDIR}/ghostty"
+git clone --depth=1 https://github.com/ghostty-org/ghostty.git "${BUILD_TMP}/ghostty"
+cd "${BUILD_TMP}/ghostty"
 
 PKGVER=$(git describe --tags --always | sed -e 's/^v//' -e 's/-/./g')
-COMMITS=$(git rev-list --count HEAD)
 DATE=$(git log -1 --date=short --pretty=format:%cd | sed 's/-/./g' | sed 's/_/./g')
 ZON_VER=$(grep -m 1 -oP '\.version\s*=\s*"\K[^"]+' build.zig.zon || echo "1.0.0")
 
@@ -131,7 +140,6 @@ PKGNAME="ghostty-git"
 PKGDESC="Fast, feature-rich, and native terminal emulator"
 MAINTAINER="Michael Garcia <thecrazygm@gmail.com>"
 URL="https://ghostty.org/"
-ARCH=$(dpkg --print-architecture)
 
 DEB_FILE="${OUTDIR}/${PKGNAME}_${FULLVER}_${ARCH}.deb"
 if [[ -f "$DEB_FILE" ]]; then
@@ -153,7 +161,7 @@ if [[ -f src/build/SharedDeps.zig ]]; then
   sed -i 's/linkSystemLibrary2("bzip2", dynamic_link_opts)/linkSystemLibrary2("bz2", dynamic_link_opts)/' src/build/SharedDeps.zig
 fi
 
-PKGDIR="${TMPDIR}/pkg"
+PKGDIR="${BUILD_TMP}/pkg"
 mkdir -p "${PKGDIR}"
 
 info "Building Ghostty with Zig"

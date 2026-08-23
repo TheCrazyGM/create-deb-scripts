@@ -16,30 +16,31 @@ info() {
 
 OUTDIR=$(pwd)
 
-TMPDIR=$(mktemp -d -t makerofi.XXXXXX)
+BUILD_TMP=$(mktemp -d -t makerofi.XXXXXX)
 cleanup() {
-  if [[ -n "${TMPDIR:-}" && -d "${TMPDIR}" ]]; then
-    rm -rf "${TMPDIR}"
+  if [[ -n "${BUILD_TMP:-}" && -d "${BUILD_TMP}" ]]; then
+    rm -rf "${BUILD_TMP}"
   fi
 }
-trap cleanup EXIT INT TERM
-info "Using temp dir: ${TMPDIR}"
+trap cleanup EXIT
+# Signal traps exit so the EXIT trap (and cleanup) runs exactly once.
+trap 'exit 130' INT
+trap 'exit 143' TERM
+info "Using temp dir: ${BUILD_TMP}"
 
 for cmd in git meson ninja dpkg-deb; do
   command -v "$cmd" >/dev/null 2>&1 || die "Missing required tool: $cmd"
 done
 
-git clone --depth=1 https://github.com/davatorium/rofi.git "${TMPDIR}/rofi"
-cd "${TMPDIR}/rofi"
+git clone --depth=1 https://github.com/davatorium/rofi.git "${BUILD_TMP}/rofi"
+cd "${BUILD_TMP}/rofi"
 git submodule update --init --recursive
 
 PKGVER=$(git describe --tags --always | sed -e 's/^v//' -e 's/-/./g')
-COMMITS=$(git rev-list --count HEAD)
 DATE=$(git log -1 --date=short --pretty=format:%cd | sed 's/-/./g' | sed 's/_/./g')
-if [[ "$PKGVER" =~ ^(.*)\.([0-9]+)\.g([0-9a-f]+)$ ]]; then
-  UPSTREAM="${BASH_REMATCH[1]}"
-  HASH="${BASH_REMATCH[3]}"
-elif [[ "$PKGVER" =~ ^([0-9a-f]+)$ ]]; then
+# Depth-1 clones fetch no tags, so git describe always falls back to a
+# short commit hash; the upstream version comes from project metadata.
+if [[ "$PKGVER" =~ ^([0-9a-f]+)$ ]]; then
   UPSTREAM=$(grep -m 1 -oE "\bversion:\s*'[^']+'" meson.build | cut -d"'" -f2)
   HASH="${BASH_REMATCH[1]}"
 else
@@ -94,7 +95,7 @@ meson setup "${BUILD_DIR}" \
 info "Building Rofi"
 ninja -C "${BUILD_DIR}" -v
 
-PKGDIR="${TMPDIR}/pkg"
+PKGDIR="${BUILD_TMP}/pkg"
 mkdir -p "${PKGDIR}"
 
 info "Staging install"

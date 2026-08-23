@@ -19,10 +19,7 @@ trap 'rm -rf "$TMP_BUILD_DIR" 2>/dev/null || true' EXIT
 PACKAGE_NAME="antigravity"
 ARCH="$(dpkg --print-architecture)"
 OUTDIR=$(pwd)
-TEMP_JS="$TMP_BUILD_DIR/main_js_temp.js"
 
-RELEASES_PAGE_URL="https://antigravity.google/releases"
-BASE_URL="https://antigravity.google"
 RELEASES_API_URL="https://antigravity-hub-auto-updater-974169037036.us-central1.run.app/releases"
 
 # === CHECK DEPENDENCIES ===
@@ -48,9 +45,6 @@ arm64)
 esac
 
 # === DYNAMICALLY FETCH LATEST TARBALL URL ===
-info "Fetching download page to find latest release..."
-html_content=$(curl -sL --compressed "https://antigravity.google/download" || curl -sL --compressed "https://antigravity.google/releases")
-
 TARBALL_URL=""
 VERSION=""
 
@@ -68,6 +62,8 @@ if [ -n "$api_response" ]; then
 fi
 
 if [ -z "$TARBALL_URL" ]; then
+  info "Updater API unavailable; parsing the download page as a fallback..."
+  html_content=$(curl -sL --compressed "https://antigravity.google/download" || curl -sL --compressed "https://antigravity.google/releases")
   TARBALL_URL=$(echo "$html_content" | grep -oP 'https://storage.googleapis.com/antigravity-public/antigravity-hub/[^/]+/'"$ARCH_SUFFIX"'/Antigravity\.tar\.gz' | head -n 1 || true)
 fi
 
@@ -148,7 +144,6 @@ if [ -f "$INSTALL_DIR/chrome-sandbox" ]; then
   chmod 4755 "$INSTALL_DIR/chrome-sandbox"
 fi
 
-
 # === CREATE EXECUTABLE WRAPPER ===
 info "Creating wrapper script..."
 cat <<EOF >"$BIN_DIR/antigravity"
@@ -161,7 +156,7 @@ chmod +x "$BIN_DIR/antigravity"
 info "Installing icons..."
 ICON_TARGET_DIR="$BUILD_DIR/usr/share/icons/hicolor/scalable/apps"
 mkdir -p "$ICON_TARGET_DIR"
-if curl -sL --compressed "https://antigravity.google/assets/image/antigravity-logo.svg" -o "$ICON_TARGET_DIR/antigravity.svg"; then
+if curl -fsSL --compressed "https://antigravity.google/assets/image/antigravity-logo.svg" -o "$ICON_TARGET_DIR/antigravity.svg"; then
   info "Icon downloaded successfully."
 else
   echo "Warning: Failed to download icon from website." >&2
@@ -201,7 +196,7 @@ cat <<'EOF' >"$BUILD_DIR/DEBIAN/postinst"
 #!/bin/bash
 set -e
 if command -v gtk-update-icon-cache &>/dev/null; then
-  gtk-update-icon-cache -f /usr/share/icons/hicolor
+  gtk-update-icon-cache -f /usr/share/icons/hicolor || true
 fi
 if command -v update-desktop-database &>/dev/null; then
   update-desktop-database -q /usr/share/applications || true

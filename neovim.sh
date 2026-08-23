@@ -18,14 +18,17 @@ info() { echo "[INFO]  $*"; }
 OUTDIR=$(pwd)
 
 # Temp dir
-TMPDIR=$(mktemp -d -t makenvim.XXXXXX)
+BUILD_TMP=$(mktemp -d -t makenvim.XXXXXX)
 cleanup() {
-  if [[ -n "${TMPDIR:-}" && -d "${TMPDIR}" ]]; then
-    rm -rf "${TMPDIR}"
+  if [[ -n "${BUILD_TMP:-}" && -d "${BUILD_TMP}" ]]; then
+    rm -rf "${BUILD_TMP}"
   fi
 }
-trap cleanup EXIT INT TERM
-info "Using temp dir: ${TMPDIR}"
+trap cleanup EXIT
+# Signal traps exit so the EXIT trap (and cleanup) runs exactly once.
+trap 'exit 130' INT
+trap 'exit 143' TERM
+info "Using temp dir: ${BUILD_TMP}"
 
 # Check required tools
 for cmd in git cmake make dpkg-deb; do
@@ -33,17 +36,15 @@ for cmd in git cmake make dpkg-deb; do
 done
 
 # Clone repo
-git clone --depth=1 https://github.com/neovim/neovim.git "$TMPDIR/neovim"
-cd "$TMPDIR/neovim"
+git clone --depth=1 https://github.com/neovim/neovim.git "$BUILD_TMP/neovim"
+cd "$BUILD_TMP/neovim"
 
 # Compute version
 PKGVER=$(git describe --always | sed -e 's:-:.:g' -e 's:v::')
-COMMITS=$(git rev-list --count HEAD)
 DATE=$(git log -1 --date=short --pretty=format:%cd | sed 's:-:.:g' | sed 's:_:.:g')
-if [[ "$PKGVER" =~ ^(.*)\.([0-9]+)\.g([0-9a-f]+)$ ]]; then
-  UPSTREAM="${BASH_REMATCH[1]}"
-  HASH="${BASH_REMATCH[3]}"
-elif [[ "$PKGVER" =~ ^([0-9a-f]+)$ ]]; then
+# Depth-1 clones fetch no tags, so git describe always falls back to a
+# short commit hash; the upstream version comes from project metadata.
+if [[ "$PKGVER" =~ ^([0-9a-f]+)$ ]]; then
   MAJOR=$(grep -oE 'set\(NVIM_VERSION_MAJOR [0-9]+\)' CMakeLists.txt | grep -oE '[0-9]+')
   MINOR=$(grep -oE 'set\(NVIM_VERSION_MINOR [0-9]+\)' CMakeLists.txt | grep -oE '[0-9]+')
   PATCH=$(grep -oE 'set\(NVIM_VERSION_PATCH [0-9]+\)' CMakeLists.txt | grep -oE '[0-9]+')
@@ -87,8 +88,10 @@ if [[ -f "$DEB_FILE" ]]; then
   fi
 fi
 
-# Runtime deps mapped to Debian package names (adjust for t64 transitions if needed)
-DEPENDS="libluajit-5.1-2, libluajit-5.1-common, libmsgpack-c2, libtermkey1, libunibilium4, libvterm0, lua-luv"
+# The default build bundles third-party libs (luajit, luv, libvterm,
+# unibilium, msgpack) and links them statically, so only core runtime
+# libs are declared as package dependencies.
+DEPENDS="libc6"
 
 # Prepare
 rm -rf build .builds .deps
@@ -103,7 +106,7 @@ fi
 CMAKE_EXTRA_FLAGS="${CMAKE_FLAGS[*]}" CMAKE_BUILD_TYPE=Release make -j "$(nproc)"
 
 # Install to pkg dir
-PKGDIR="$TMPDIR/pkg"
+PKGDIR="$BUILD_TMP/pkg"
 mkdir -p "$PKGDIR/usr"
 make install DESTDIR="$PKGDIR"
 

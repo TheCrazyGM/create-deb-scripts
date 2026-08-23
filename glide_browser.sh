@@ -157,6 +157,7 @@ Priority: optional
 Architecture: $ARCH
 Maintainer: Michael Garcia <thecrazygm@gmail.com>
 Description: Glide Browser - A lightweight Firefox-based browser.
+Depends: ca-certificates, libasound2t64 | libasound2, libc6, libdbus-glib-1-2, libgtk-3-0, libstdc++6, libxtst6, xdg-utils
 EOF
 
 # === POSTINST TO UPDATE CACHES ===
@@ -164,7 +165,7 @@ cat <<'EOF' >"$BUILD_DIR/DEBIAN/postinst"
 #!/bin/bash
 set -e
 if command -v gtk-update-icon-cache &>/dev/null; then
-  gtk-update-icon-cache -f /usr/share/icons/hicolor
+  gtk-update-icon-cache -f /usr/share/icons/hicolor || true
 fi
 if command -v update-desktop-database &>/dev/null; then
   update-desktop-database -q /usr/share/applications || true
