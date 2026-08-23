@@ -49,7 +49,6 @@ git submodule update --init --recursive
 
 # Versioning strategy
 PKGVER=$(git describe --tags --always | sed -e 's/^v//' -e 's/-/./g')
-COMMITS=$(git rev-list --count HEAD)
 DATE=$(git log -1 --date=short --pretty=format:%cd | sed 's/-/./g' | sed 's/_/./g')
 # Depth-1 clones fetch no tags, so git describe always falls back to a
 # short commit hash; the upstream version comes from project metadata.

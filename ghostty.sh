@@ -101,7 +101,6 @@ git clone --depth=1 https://github.com/ghostty-org/ghostty.git "${BUILD_TMP}/gho
 cd "${BUILD_TMP}/ghostty"
 
 PKGVER=$(git describe --tags --always | sed -e 's/^v//' -e 's/-/./g')
-COMMITS=$(git rev-list --count HEAD)
 DATE=$(git log -1 --date=short --pretty=format:%cd | sed 's/-/./g' | sed 's/_/./g')
 ZON_VER=$(grep -m 1 -oP '\.version\s*=\s*"\K[^"]+' build.zig.zon || echo "1.0.0")
 

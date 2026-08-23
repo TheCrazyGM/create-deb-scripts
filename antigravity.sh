@@ -19,10 +19,7 @@ trap 'rm -rf "$TMP_BUILD_DIR" 2>/dev/null || true' EXIT
 PACKAGE_NAME="antigravity"
 ARCH="$(dpkg --print-architecture)"
 OUTDIR=$(pwd)
-TEMP_JS="$TMP_BUILD_DIR/main_js_temp.js"
 
-RELEASES_PAGE_URL="https://antigravity.google/releases"
-BASE_URL="https://antigravity.google"
 RELEASES_API_URL="https://antigravity-hub-auto-updater-974169037036.us-central1.run.app/releases"
 
 # === CHECK DEPENDENCIES ===
@@ -147,7 +144,6 @@ if [ -f "$INSTALL_DIR/chrome-sandbox" ]; then
   info "Setting SUID permissions on chrome-sandbox..."
   chmod 4755 "$INSTALL_DIR/chrome-sandbox"
 fi
-
 
 # === CREATE EXECUTABLE WRAPPER ===
 info "Creating wrapper script..."
