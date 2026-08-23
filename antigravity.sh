@@ -161,7 +161,7 @@ chmod +x "$BIN_DIR/antigravity"
 info "Installing icons..."
 ICON_TARGET_DIR="$BUILD_DIR/usr/share/icons/hicolor/scalable/apps"
 mkdir -p "$ICON_TARGET_DIR"
-if curl -sL --compressed "https://antigravity.google/assets/image/antigravity-logo.svg" -o "$ICON_TARGET_DIR/antigravity.svg"; then
+if curl -fsSL --compressed "https://antigravity.google/assets/image/antigravity-logo.svg" -o "$ICON_TARGET_DIR/antigravity.svg"; then
   info "Icon downloaded successfully."
 else
   echo "Warning: Failed to download icon from website." >&2
