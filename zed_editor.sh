@@ -159,7 +159,7 @@ cat <<'EOF' >"$BUILD_DIR/DEBIAN/postinst"
 #!/bin/bash
 set -e
 if command -v gtk-update-icon-cache &>/dev/null; then
-  gtk-update-icon-cache -f /usr/share/icons/hicolor
+  gtk-update-icon-cache -f /usr/share/icons/hicolor || true
 fi
 if command -v update-desktop-database &>/dev/null; then
   update-desktop-database -q /usr/share/applications || true
