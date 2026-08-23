@@ -43,10 +43,9 @@ cd "$TMPDIR/neovim"
 PKGVER=$(git describe --always | sed -e 's:-:.:g' -e 's:v::')
 COMMITS=$(git rev-list --count HEAD)
 DATE=$(git log -1 --date=short --pretty=format:%cd | sed 's:-:.:g' | sed 's:_:.:g')
-if [[ "$PKGVER" =~ ^(.*)\.([0-9]+)\.g([0-9a-f]+)$ ]]; then
-  UPSTREAM="${BASH_REMATCH[1]}"
-  HASH="${BASH_REMATCH[3]}"
-elif [[ "$PKGVER" =~ ^([0-9a-f]+)$ ]]; then
+# Depth-1 clones fetch no tags, so git describe always falls back to a
+# short commit hash; the upstream version comes from project metadata.
+if [[ "$PKGVER" =~ ^([0-9a-f]+)$ ]]; then
   MAJOR=$(grep -oE 'set\(NVIM_VERSION_MAJOR [0-9]+\)' CMakeLists.txt | grep -oE '[0-9]+')
   MINOR=$(grep -oE 'set\(NVIM_VERSION_MINOR [0-9]+\)' CMakeLists.txt | grep -oE '[0-9]+')
   PATCH=$(grep -oE 'set\(NVIM_VERSION_PATCH [0-9]+\)' CMakeLists.txt | grep -oE '[0-9]+')
