@@ -151,3 +151,4 @@ The scripts print the absolute path to the generated `.deb` on success.
 - Scripts handle cleanup automatically, removing temporary files on completion or failure.
 - Desktop entries are installed to `usr/share/applications` and icons to `usr/share/icons/hicolor` (Zed/Zen).
 - Post-install scripts refresh icon and desktop caches to ensure entries appear immediately.
+- If the target `.deb` already exists and stdin is not a TTY (e.g. cron), the scripts exit 0 without rebuilding; the existing artifact is treated as final.
