@@ -22,7 +22,10 @@ cleanup() {
     rm -rf "${TMPDIR}"
   fi
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+# Signal traps exit so the EXIT trap (and cleanup) runs exactly once.
+trap 'exit 130' INT
+trap 'exit 143' TERM
 info "Using temp dir: ${TMPDIR}"
 
 for cmd in git go dpkg-deb; do
