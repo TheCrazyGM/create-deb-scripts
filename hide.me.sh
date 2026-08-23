@@ -90,7 +90,6 @@ mkdir -p "${PKGDIR}/lib/systemd/system"
 info "Staging install"
 cp hide.me CA.pem hide.me@.service config "${PKGDIR}/opt/hide.me"
 chmod +x "${PKGDIR}/opt/hide.me/hide.me"
-touch "${PKGDIR}/opt/hide.me/config"
 
 # Create symlink for the binary to /usr/bin/hide.me
 ln -sf /opt/hide.me/hide.me "${PKGDIR}/usr/bin/hide.me"
