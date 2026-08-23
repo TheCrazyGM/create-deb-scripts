@@ -175,6 +175,7 @@ Priority: optional
 Architecture: $ARCH
 Maintainer: Michael Garcia <thecrazygm@gmail.com>
 Description: Zen Browser - A privacy-focused browser that helps you browse in peace.
+Depends: ca-certificates, libasound2t64 | libasound2, libc6, libdbus-glib-1-2, libgtk-3-0, libstdc++6, libxtst6, xdg-utils
 EOF
 
 # === POSTINST TO UPDATE ICON CACHE ===

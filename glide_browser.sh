@@ -157,6 +157,7 @@ Priority: optional
 Architecture: $ARCH
 Maintainer: Michael Garcia <thecrazygm@gmail.com>
 Description: Glide Browser - A lightweight Firefox-based browser.
+Depends: ca-certificates, libasound2t64 | libasound2, libc6, libdbus-glib-1-2, libgtk-3-0, libstdc++6, libxtst6, xdg-utils
 EOF
 
 # === POSTINST TO UPDATE CACHES ===
