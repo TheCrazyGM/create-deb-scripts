@@ -16,24 +16,24 @@ info() {
 
 OUTDIR=$(pwd)
 
-TMPDIR=$(mktemp -d -t makehideme.XXXXXX)
+BUILD_TMP=$(mktemp -d -t makehideme.XXXXXX)
 cleanup() {
-  if [[ -n "${TMPDIR:-}" && -d "${TMPDIR}" ]]; then
-    rm -rf "${TMPDIR}"
+  if [[ -n "${BUILD_TMP:-}" && -d "${BUILD_TMP}" ]]; then
+    rm -rf "${BUILD_TMP}"
   fi
 }
 trap cleanup EXIT
 # Signal traps exit so the EXIT trap (and cleanup) runs exactly once.
 trap 'exit 130' INT
 trap 'exit 143' TERM
-info "Using temp dir: ${TMPDIR}"
+info "Using temp dir: ${BUILD_TMP}"
 
 for cmd in git go dpkg-deb; do
   command -v "$cmd" >/dev/null 2>&1 || die "Missing required tool: $cmd"
 done
 
-git clone --depth=1 https://github.com/eventure/hide.client.linux.git "${TMPDIR}/hide.client.linux"
-cd "${TMPDIR}/hide.client.linux"
+git clone --depth=1 https://github.com/eventure/hide.client.linux.git "${BUILD_TMP}/hide.client.linux"
+cd "${BUILD_TMP}/hide.client.linux"
 
 PKGVER=$(git describe --tags --always | sed -e 's/^v//' -e 's/-/./g')
 COMMITS=$(git rev-list --count HEAD)
@@ -83,7 +83,7 @@ fi
 info "Building hide.me CLI VPN client"
 go build -o hide.me
 
-PKGDIR="${TMPDIR}/pkg"
+PKGDIR="${BUILD_TMP}/pkg"
 mkdir -p "${PKGDIR}/opt/hide.me"
 mkdir -p "${PKGDIR}/usr/bin"
 mkdir -p "${PKGDIR}/lib/systemd/system"

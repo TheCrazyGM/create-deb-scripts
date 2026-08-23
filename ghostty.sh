@@ -16,17 +16,17 @@ info() {
 
 OUTDIR=$(pwd)
 
-TMPDIR=$(mktemp -d -t makeghostty.XXXXXX)
+BUILD_TMP=$(mktemp -d -t makeghostty.XXXXXX)
 cleanup() {
-  if [[ -n "${TMPDIR:-}" && -d "${TMPDIR}" ]]; then
-    rm -rf "${TMPDIR}"
+  if [[ -n "${BUILD_TMP:-}" && -d "${BUILD_TMP}" ]]; then
+    rm -rf "${BUILD_TMP}"
   fi
 }
 trap cleanup EXIT
 # Signal traps exit so the EXIT trap (and cleanup) runs exactly once.
 trap 'exit 130' INT
 trap 'exit 143' TERM
-info "Using temp dir: ${TMPDIR}"
+info "Using temp dir: ${BUILD_TMP}"
 
 for cmd in git dpkg-deb pkg-config wget tar; do
   command -v "$cmd" >/dev/null 2>&1 || die "Missing required tool: $cmd"
@@ -92,13 +92,13 @@ if [[ -z "$ZIG_CMD" ]]; then
   esac
   info "System zig is not 0.16.x and no local 0.16.x binary was found."
   info "Downloading Zig 0.16.0 compiler for ${ZIG_ARCH}..."
-  wget -q "https://ziglang.org/download/0.16.0/zig-${ZIG_ARCH}-linux-0.16.0.tar.xz" -O "${TMPDIR}/zig.tar.xz"
-  tar -xf "${TMPDIR}/zig.tar.xz" -C "${TMPDIR}"
-  ZIG_CMD="${TMPDIR}/zig-${ZIG_ARCH}-linux-0.16.0/zig"
+  wget -q "https://ziglang.org/download/0.16.0/zig-${ZIG_ARCH}-linux-0.16.0.tar.xz" -O "${BUILD_TMP}/zig.tar.xz"
+  tar -xf "${BUILD_TMP}/zig.tar.xz" -C "${BUILD_TMP}"
+  ZIG_CMD="${BUILD_TMP}/zig-${ZIG_ARCH}-linux-0.16.0/zig"
 fi
 
-git clone --depth=1 https://github.com/ghostty-org/ghostty.git "${TMPDIR}/ghostty"
-cd "${TMPDIR}/ghostty"
+git clone --depth=1 https://github.com/ghostty-org/ghostty.git "${BUILD_TMP}/ghostty"
+cd "${BUILD_TMP}/ghostty"
 
 PKGVER=$(git describe --tags --always | sed -e 's/^v//' -e 's/-/./g')
 COMMITS=$(git rev-list --count HEAD)
@@ -162,7 +162,7 @@ if [[ -f src/build/SharedDeps.zig ]]; then
   sed -i 's/linkSystemLibrary2("bzip2", dynamic_link_opts)/linkSystemLibrary2("bz2", dynamic_link_opts)/' src/build/SharedDeps.zig
 fi
 
-PKGDIR="${TMPDIR}/pkg"
+PKGDIR="${BUILD_TMP}/pkg"
 mkdir -p "${PKGDIR}"
 
 info "Building Ghostty with Zig"

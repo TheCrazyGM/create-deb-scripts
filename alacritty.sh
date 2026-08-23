@@ -16,17 +16,17 @@ info() {
 
 OUTDIR=$(pwd)
 
-TMPDIR=$(mktemp -d -t makealacritty.XXXXXX)
+BUILD_TMP=$(mktemp -d -t makealacritty.XXXXXX)
 cleanup() {
-  if [[ -n "${TMPDIR:-}" && -d "${TMPDIR}" ]]; then
-    rm -rf "${TMPDIR}"
+  if [[ -n "${BUILD_TMP:-}" && -d "${BUILD_TMP}" ]]; then
+    rm -rf "${BUILD_TMP}"
   fi
 }
 trap cleanup EXIT
 # Signal traps exit so the EXIT trap (and cleanup) runs exactly once.
 trap 'exit 130' INT
 trap 'exit 143' TERM
-info "Using temp dir: ${TMPDIR}"
+info "Using temp dir: ${BUILD_TMP}"
 
 # Check for required tools
 # Note: scdoc is optional but recommended for man pages.
@@ -43,8 +43,8 @@ else
   info "scdoc not found, man pages will NOT be generated."
 fi
 
-git clone --depth=1 https://github.com/alacritty/alacritty.git "${TMPDIR}/alacritty"
-cd "${TMPDIR}/alacritty"
+git clone --depth=1 https://github.com/alacritty/alacritty.git "${BUILD_TMP}/alacritty"
+cd "${BUILD_TMP}/alacritty"
 git submodule update --init --recursive
 
 # Versioning strategy
@@ -101,7 +101,7 @@ DEPENDS="libc6, libfontconfig1, libfreetype6, libxcb1, libxcb-render0, libxcb-sh
 info "Building Alacritty (release)"
 cargo build --release --locked
 
-PKGDIR="${TMPDIR}/pkg"
+PKGDIR="${BUILD_TMP}/pkg"
 mkdir -p "${PKGDIR}"
 
 # --- Installation ---

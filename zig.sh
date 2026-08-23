@@ -17,17 +17,17 @@ info() {
 
 OUTDIR=$(pwd)
 
-TMPDIR=$(mktemp -d -t makezig.XXXXXX)
+BUILD_TMP=$(mktemp -d -t makezig.XXXXXX)
 cleanup() {
-  if [[ -n "${TMPDIR:-}" && -d "${TMPDIR}" ]]; then
-    rm -rf "${TMPDIR}"
+  if [[ -n "${BUILD_TMP:-}" && -d "${BUILD_TMP}" ]]; then
+    rm -rf "${BUILD_TMP}"
   fi
 }
 trap cleanup EXIT
 # Signal traps exit so the EXIT trap (and cleanup) runs exactly once.
 trap 'exit 130' INT
 trap 'exit 143' TERM
-info "Using temp dir: ${TMPDIR}"
+info "Using temp dir: ${BUILD_TMP}"
 
 for cmd in curl wget tar jq dpkg-deb; do
   command -v "$cmd" >/dev/null 2>&1 || die "Missing required tool: $cmd"
@@ -36,7 +36,7 @@ done
 # Version selection:
 # - If an argument is provided, use it as the version.
 # - Otherwise, query ziglang.org API for the latest stable release.
-INDEX_JSON="${TMPDIR}/zig-index.json"
+INDEX_JSON="${BUILD_TMP}/zig-index.json"
 info "Fetching ziglang.org release index..."
 curl -fsS https://ziglang.org/download/index.json -o "${INDEX_JSON}" \
   || die "Failed to fetch ziglang.org download index."
@@ -92,32 +92,32 @@ if [[ -z "$EXPECTED_SHA" ]]; then
 fi
 
 info "Downloading Zig compiler: ${DOWNLOAD_URL}"
-wget -q "$DOWNLOAD_URL" -O "${TMPDIR}/zig.tar.xz"
+wget -q "$DOWNLOAD_URL" -O "${BUILD_TMP}/zig.tar.xz"
 
-ACTUAL_SHA=$(sha256sum "${TMPDIR}/zig.tar.xz" | cut -d' ' -f1)
+ACTUAL_SHA=$(sha256sum "${BUILD_TMP}/zig.tar.xz" | cut -d' ' -f1)
 if [[ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]]; then
   die "Checksum mismatch for Zig ${VERSION} tarball: expected ${EXPECTED_SHA}, got ${ACTUAL_SHA}"
 fi
 info "Checksum verified: ${ACTUAL_SHA}"
 
 info "Extracting compiler..."
-tar -xf "${TMPDIR}/zig.tar.xz" -C "${TMPDIR}"
+tar -xf "${BUILD_TMP}/zig.tar.xz" -C "${BUILD_TMP}"
 
-PKGDIR="${TMPDIR}/pkg"
+PKGDIR="${BUILD_TMP}/pkg"
 mkdir -p "${PKGDIR}/usr/lib/zig/${VERSION}"
 
 info "Staging files..."
-cp "${TMPDIR}/zig-${ZIG_ARCH}-linux-${VERSION}/zig" "${PKGDIR}/usr/lib/zig/${VERSION}/"
-cp -r "${TMPDIR}/zig-${ZIG_ARCH}-linux-${VERSION}/lib" "${PKGDIR}/usr/lib/zig/${VERSION}/"
+cp "${BUILD_TMP}/zig-${ZIG_ARCH}-linux-${VERSION}/zig" "${PKGDIR}/usr/lib/zig/${VERSION}/"
+cp -r "${BUILD_TMP}/zig-${ZIG_ARCH}-linux-${VERSION}/lib" "${PKGDIR}/usr/lib/zig/${VERSION}/"
 
 # Document dir
 DOC_DIR="${PKGDIR}/usr/share/doc/${PKGNAME}"
 mkdir -p "${DOC_DIR}"
-if [[ -f "${TMPDIR}/zig-${ZIG_ARCH}-linux-${VERSION}/LICENSE" ]]; then
-  install -Dm644 "${TMPDIR}/zig-${ZIG_ARCH}-linux-${VERSION}/LICENSE" "${DOC_DIR}/copyright"
+if [[ -f "${BUILD_TMP}/zig-${ZIG_ARCH}-linux-${VERSION}/LICENSE" ]]; then
+  install -Dm644 "${BUILD_TMP}/zig-${ZIG_ARCH}-linux-${VERSION}/LICENSE" "${DOC_DIR}/copyright"
 fi
-if [[ -f "${TMPDIR}/zig-${ZIG_ARCH}-linux-${VERSION}/README.md" ]]; then
-  install -Dm644 "${TMPDIR}/zig-${ZIG_ARCH}-linux-${VERSION}/README.md" "${DOC_DIR}/README.md"
+if [[ -f "${BUILD_TMP}/zig-${ZIG_ARCH}-linux-${VERSION}/README.md" ]]; then
+  install -Dm644 "${BUILD_TMP}/zig-${ZIG_ARCH}-linux-${VERSION}/README.md" "${DOC_DIR}/README.md"
 fi
 
 # Create DEBIAN metadata control

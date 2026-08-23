@@ -17,17 +17,17 @@ info() {
 
 OUTDIR=$(pwd)
 
-TMPDIR=$(mktemp -d -t makescribus.XXXXXX)
+BUILD_TMP=$(mktemp -d -t makescribus.XXXXXX)
 cleanup() {
-  if [[ -n "${TMPDIR:-}" && -d "${TMPDIR}" ]]; then
-    rm -rf "${TMPDIR}"
+  if [[ -n "${BUILD_TMP:-}" && -d "${BUILD_TMP}" ]]; then
+    rm -rf "${BUILD_TMP}"
   fi
 }
 trap cleanup EXIT
 # Signal traps exit so the EXIT trap (and cleanup) runs exactly once.
 trap 'exit 130' INT
 trap 'exit 143' TERM
-info "Using temp dir: ${TMPDIR}"
+info "Using temp dir: ${BUILD_TMP}"
 
 for cmd in curl wget grep sed dpkg-deb; do
   command -v "$cmd" >/dev/null 2>&1 || die "Missing required tool: $cmd"
@@ -64,42 +64,42 @@ if [[ -f "$DEB_FILE" ]]; then
 fi
 
 info "Downloading AppImage: ${APPIMAGE_URL}"
-wget -O "${TMPDIR}/scribus.AppImage" "$APPIMAGE_URL"
+wget -O "${BUILD_TMP}/scribus.AppImage" "$APPIMAGE_URL"
 
 info "Extracting AppImage..."
-cd "${TMPDIR}"
+cd "${BUILD_TMP}"
 chmod +x scribus.AppImage
 ./scribus.AppImage --appimage-extract
 
-PKGDIR="${TMPDIR}/pkg"
+PKGDIR="${BUILD_TMP}/pkg"
 mkdir -p "${PKGDIR}/opt/scribus"
 mkdir -p "${PKGDIR}/usr/bin"
 mkdir -p "${PKGDIR}/usr/share/applications"
 mkdir -p "${PKGDIR}/usr/share/pixmaps"
 
 info "Staging files..."
-cp -r "${TMPDIR}/squashfs-root/"* "${PKGDIR}/opt/scribus/"
+cp -r "${BUILD_TMP}/squashfs-root/"* "${PKGDIR}/opt/scribus/"
 
 # Create symlinks
 ln -sf /opt/scribus/AppRun "${PKGDIR}/usr/bin/scribus"
 ln -sf /opt/scribus/AppRun "${PKGDIR}/usr/bin/scribus-devel"
 
 # Install icons
-if [[ -f "${TMPDIR}/squashfs-root/scribus.png" ]]; then
-  cp "${TMPDIR}/squashfs-root/scribus.png" "${PKGDIR}/usr/share/pixmaps/scribus-devel.png"
-  cp "${TMPDIR}/squashfs-root/scribus.png" "${PKGDIR}/usr/share/pixmaps/scribus.png"
+if [[ -f "${BUILD_TMP}/squashfs-root/scribus.png" ]]; then
+  cp "${BUILD_TMP}/squashfs-root/scribus.png" "${PKGDIR}/usr/share/pixmaps/scribus-devel.png"
+  cp "${BUILD_TMP}/squashfs-root/scribus.png" "${PKGDIR}/usr/share/pixmaps/scribus.png"
 fi
 
 # Install desktop files
-if [[ -f "${TMPDIR}/squashfs-root/scribus.desktop" ]]; then
+if [[ -f "${BUILD_TMP}/squashfs-root/scribus.desktop" ]]; then
   # 1. Developer Launcher
-  cp "${TMPDIR}/squashfs-root/scribus.desktop" "${PKGDIR}/usr/share/applications/scribus-devel.desktop"
+  cp "${BUILD_TMP}/squashfs-root/scribus.desktop" "${PKGDIR}/usr/share/applications/scribus-devel.desktop"
   sed -i 's|^Exec=.*|Exec=/usr/bin/scribus-devel %f|' "${PKGDIR}/usr/share/applications/scribus-devel.desktop"
   sed -i 's|^Name=.*|Name=Scribus (Development)|' "${PKGDIR}/usr/share/applications/scribus-devel.desktop"
   sed -i 's|^Icon=.*|Icon=scribus-devel|' "${PKGDIR}/usr/share/applications/scribus-devel.desktop"
 
   # 2. Main Launcher (conflicts/replaces package standard)
-  cp "${TMPDIR}/squashfs-root/scribus.desktop" "${PKGDIR}/usr/share/applications/scribus.desktop"
+  cp "${BUILD_TMP}/squashfs-root/scribus.desktop" "${PKGDIR}/usr/share/applications/scribus.desktop"
   sed -i 's|^Exec=.*|Exec=/usr/bin/scribus %f|' "${PKGDIR}/usr/share/applications/scribus.desktop"
   sed -i 's|^Name=.*|Name=Scribus (Development)|' "${PKGDIR}/usr/share/applications/scribus.desktop"
   sed -i 's|^Icon=.*|Icon=scribus|' "${PKGDIR}/usr/share/applications/scribus.desktop"

@@ -18,17 +18,17 @@ info() { echo "[INFO]  $*"; }
 OUTDIR=$(pwd)
 
 # Temp dir
-TMPDIR=$(mktemp -d -t makenvim.XXXXXX)
+BUILD_TMP=$(mktemp -d -t makenvim.XXXXXX)
 cleanup() {
-  if [[ -n "${TMPDIR:-}" && -d "${TMPDIR}" ]]; then
-    rm -rf "${TMPDIR}"
+  if [[ -n "${BUILD_TMP:-}" && -d "${BUILD_TMP}" ]]; then
+    rm -rf "${BUILD_TMP}"
   fi
 }
 trap cleanup EXIT
 # Signal traps exit so the EXIT trap (and cleanup) runs exactly once.
 trap 'exit 130' INT
 trap 'exit 143' TERM
-info "Using temp dir: ${TMPDIR}"
+info "Using temp dir: ${BUILD_TMP}"
 
 # Check required tools
 for cmd in git cmake make dpkg-deb; do
@@ -36,8 +36,8 @@ for cmd in git cmake make dpkg-deb; do
 done
 
 # Clone repo
-git clone --depth=1 https://github.com/neovim/neovim.git "$TMPDIR/neovim"
-cd "$TMPDIR/neovim"
+git clone --depth=1 https://github.com/neovim/neovim.git "$BUILD_TMP/neovim"
+cd "$BUILD_TMP/neovim"
 
 # Compute version
 PKGVER=$(git describe --always | sed -e 's:-:.:g' -e 's:v::')
@@ -105,7 +105,7 @@ fi
 CMAKE_EXTRA_FLAGS="${CMAKE_FLAGS[*]}" CMAKE_BUILD_TYPE=Release make -j "$(nproc)"
 
 # Install to pkg dir
-PKGDIR="$TMPDIR/pkg"
+PKGDIR="$BUILD_TMP/pkg"
 mkdir -p "$PKGDIR/usr"
 make install DESTDIR="$PKGDIR"
 

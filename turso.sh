@@ -16,24 +16,24 @@ info() {
 
 OUTDIR=$(pwd)
 
-TMPDIR=$(mktemp -d -t maketurso.XXXXXX)
+BUILD_TMP=$(mktemp -d -t maketurso.XXXXXX)
 cleanup() {
-  if [[ -n "${TMPDIR:-}" && -d "${TMPDIR}" ]]; then
-    rm -rf "${TMPDIR}"
+  if [[ -n "${BUILD_TMP:-}" && -d "${BUILD_TMP}" ]]; then
+    rm -rf "${BUILD_TMP}"
   fi
 }
 trap cleanup EXIT
 # Signal traps exit so the EXIT trap (and cleanup) runs exactly once.
 trap 'exit 130' INT
 trap 'exit 143' TERM
-info "Using temp dir: ${TMPDIR}"
+info "Using temp dir: ${BUILD_TMP}"
 
 for cmd in git cargo rustc dpkg-deb; do
   command -v "$cmd" >/dev/null 2>&1 || die "Missing required tool: $cmd"
 done
 
-git clone --depth=1 https://github.com/tursodatabase/turso.git "${TMPDIR}/turso"
-cd "${TMPDIR}/turso"
+git clone --depth=1 https://github.com/tursodatabase/turso.git "${BUILD_TMP}/turso"
+cd "${BUILD_TMP}/turso"
 
 PKGVER=$(git describe --tags --always | sed -e 's/^v//' -e 's/-/./g')
 COMMITS=$(git rev-list --count HEAD)
@@ -83,7 +83,7 @@ fi
 info "Building Turso CLI (release)"
 cargo build --release -p turso_cli --bin tursodb
 
-PKGDIR="${TMPDIR}/pkg"
+PKGDIR="${BUILD_TMP}/pkg"
 mkdir -p "${PKGDIR}/usr/bin"
 
 info "Staging install"

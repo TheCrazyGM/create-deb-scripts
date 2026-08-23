@@ -16,24 +16,24 @@ info() {
 
 OUTDIR=$(pwd)
 
-TMPDIR=$(mktemp -d -t makepicom.XXXXXX)
+BUILD_TMP=$(mktemp -d -t makepicom.XXXXXX)
 cleanup() {
-  if [[ -n "${TMPDIR:-}" && -d "${TMPDIR}" ]]; then
-    rm -rf "${TMPDIR}"
+  if [[ -n "${BUILD_TMP:-}" && -d "${BUILD_TMP}" ]]; then
+    rm -rf "${BUILD_TMP}"
   fi
 }
 trap cleanup EXIT
 # Signal traps exit so the EXIT trap (and cleanup) runs exactly once.
 trap 'exit 130' INT
 trap 'exit 143' TERM
-info "Using temp dir: ${TMPDIR}"
+info "Using temp dir: ${BUILD_TMP}"
 
 for cmd in git meson ninja dpkg-deb; do
   command -v "$cmd" >/dev/null 2>&1 || die "Missing required tool: $cmd"
 done
 
-git clone --depth=1 https://github.com/yshui/picom.git "${TMPDIR}/picom"
-cd "${TMPDIR}/picom"
+git clone --depth=1 https://github.com/yshui/picom.git "${BUILD_TMP}/picom"
+cd "${BUILD_TMP}/picom"
 git submodule update --init --recursive
 
 PKGVER=$(git describe --tags --always | sed -e 's/^v//' -e 's/-/./g')
@@ -99,7 +99,7 @@ meson setup "${BUILD_DIR}" \
 info "Building Picom"
 ninja -C "${BUILD_DIR}" -v
 
-PKGDIR="${TMPDIR}/pkg"
+PKGDIR="${BUILD_TMP}/pkg"
 mkdir -p "${PKGDIR}"
 
 info "Staging install"
