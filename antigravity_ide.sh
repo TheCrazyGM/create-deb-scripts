@@ -45,9 +45,6 @@ arm64)
 esac
 
 # === DYNAMICALLY FETCH LATEST TARBALL URL ===
-info "Fetching download page to find latest release..."
-html_content=$(curl -sL --compressed "https://antigravity.google/download" || curl -sL --compressed "https://antigravity.google/releases")
-
 TARBALL_URL=""
 VERSION=""
 
@@ -64,6 +61,8 @@ if [ -n "$api_response" ]; then
 fi
 
 if [ -z "$TARBALL_URL" ]; then
+  info "Updater API unavailable; parsing the download page as a fallback..."
+  html_content=$(curl -sL --compressed "https://antigravity.google/download" || curl -sL --compressed "https://antigravity.google/releases")
   TARBALL_URL=$(echo "$html_content" | grep -oP 'https://edgedl.me.gvt1.com/edgedl/release2/[^/]+/antigravity/stable/[^/]+/'"$ARCH_SUFFIX"'/Antigravity(%20| )IDE\.tar\.gz' | head -n 1 || true)
 fi
 
