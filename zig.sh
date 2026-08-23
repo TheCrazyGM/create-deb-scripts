@@ -36,12 +36,17 @@ done
 # Version selection:
 # - If an argument is provided, use it as the version.
 # - Otherwise, query ziglang.org API for the latest stable release.
+INDEX_JSON="${TMPDIR}/zig-index.json"
+info "Fetching ziglang.org release index..."
+curl -fsS https://ziglang.org/download/index.json -o "${INDEX_JSON}" \
+  || die "Failed to fetch ziglang.org download index."
+
 if [ $# -ge 1 ]; then
   VERSION="$1"
   info "Using specified version: ${VERSION}"
 else
   info "Querying latest stable version from ziglang.org..."
-  VERSION=$(curl -s https://ziglang.org/download/index.json | jq -r 'keys[]' | grep -v 'master' | sort -V | tail -n 1)
+  VERSION=$(jq -r 'keys[]' "${INDEX_JSON}" | grep -v 'master' | sort -V | tail -n 1)
   info "Latest stable version detected: ${VERSION}"
 fi
 
@@ -81,8 +86,19 @@ if [[ -f "$DEB_FILE" ]]; then
   fi
 fi
 
+EXPECTED_SHA=$(jq -r --arg v "${VERSION}" --arg t "${ZIG_ARCH}-linux" '.[$v][$t].shasum // empty' "${INDEX_JSON}")
+if [[ -z "$EXPECTED_SHA" ]]; then
+  die "No published sha256 for Zig ${VERSION} (${ZIG_ARCH}-linux); refusing unverified download."
+fi
+
 info "Downloading Zig compiler: ${DOWNLOAD_URL}"
 wget -q "$DOWNLOAD_URL" -O "${TMPDIR}/zig.tar.xz"
+
+ACTUAL_SHA=$(sha256sum "${TMPDIR}/zig.tar.xz" | cut -d' ' -f1)
+if [[ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]]; then
+  die "Checksum mismatch for Zig ${VERSION} tarball: expected ${EXPECTED_SHA}, got ${ACTUAL_SHA}"
+fi
+info "Checksum verified: ${ACTUAL_SHA}"
 
 info "Extracting compiler..."
 tar -xf "${TMPDIR}/zig.tar.xz" -C "${TMPDIR}"
