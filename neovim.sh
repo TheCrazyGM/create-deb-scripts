@@ -88,8 +88,10 @@ if [[ -f "$DEB_FILE" ]]; then
   fi
 fi
 
-# Runtime deps mapped to Debian package names (adjust for t64 transitions if needed)
-DEPENDS="libluajit-5.1-2, libluajit-5.1-common, libmsgpack-c2, libtermkey1, libunibilium4, libvterm0, lua-luv"
+# The default build bundles third-party libs (luajit, luv, libvterm,
+# unibilium, msgpack) and links them statically, so only core runtime
+# libs are declared as package dependencies.
+DEPENDS="libc6"
 
 # Prepare
 rm -rf build .builds .deps
