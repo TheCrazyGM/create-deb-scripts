@@ -40,8 +40,17 @@ DATE=$(git log -1 --date=short --pretty=format:%cd | sed 's/-/./g' | sed 's/_/./
 # Depth-1 clones fetch no tags, so git describe always falls back to a
 # short commit hash; the upstream version comes from project metadata.
 if [[ "$PKGVER" =~ ^([0-9a-f]+)$ ]]; then
-  UPSTREAM=$(grep -oE 'writer\.Write\( \[\]byte\( "[0-9.]+" \) \)' control/methods.go | cut -d'"' -f2 || echo "0.0.0")
   HASH="${BASH_REMATCH[1]}"
+  UPSTREAM=""
+  if [[ -f configuration.go ]]; then
+    UPSTREAM=$(grep -m 1 -oP 'Version:\s*"\K[0-9.]+' configuration.go || true)
+  fi
+  if [[ -z "$UPSTREAM" && -f control/methods.go ]]; then
+    UPSTREAM=$(grep -oE 'writer\.Write\( \[\]byte\( "[0-9.]+" \) \)' control/methods.go | cut -d'"' -f2 || true)
+  fi
+  if [[ -z "$UPSTREAM" ]]; then
+    UPSTREAM="0.0.0"
+  fi
 else
   UPSTREAM="$PKGVER"
   HASH=""
