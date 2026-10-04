@@ -50,7 +50,7 @@ VERSION=""
 
 # The Astro page renders fallback data first, then refreshes it from the
 # updater API. Query the same API before parsing static HTML.
-api_response=$(curl -fsSL "$RELEASES_API_URL" 2>/dev/null || true)
+api_response=$(curl -fsSL "$RELEASES_API_URL" </dev/null 2>/dev/null || true)
 if [ -n "$api_response" ]; then
   VERSION_VAL=$(echo "$api_response" | jq -r '.[0].version // empty' 2>/dev/null || true)
   EXEC_ID=$(echo "$api_response" | jq -r '.[0].execution_id // empty' 2>/dev/null || true)
@@ -62,7 +62,7 @@ fi
 
 if [ -z "$TARBALL_URL" ]; then
   info "Updater API unavailable; parsing the download page as a fallback..."
-  html_content=$(curl -sL --compressed "https://antigravity.google/download" || curl -sL --compressed "https://antigravity.google/releases")
+  html_content=$(curl -sL --compressed "https://antigravity.google/download" </dev/null || curl -sL --compressed "https://antigravity.google/releases" </dev/null)
   TARBALL_URL=$(echo "$html_content" | grep -oP 'https://edgedl.me.gvt1.com/edgedl/release2/[^/]+/antigravity/stable/[^/]+/'"$ARCH_SUFFIX"'/Antigravity(%20| )IDE\.tar\.gz' | head -n 1 || true)
 fi
 
@@ -97,6 +97,7 @@ DEB_FILE="${OUTDIR}/${PACKAGE_NAME}_${DEB_VERSION}_${ARCH}.deb"
 if [[ -f "$DEB_FILE" ]]; then
   info "Package $(basename "$DEB_FILE") already exists."
   if [[ -t 0 ]]; then
+    python3 -c 'import fcntl, os; fcntl.fcntl(0, fcntl.F_SETFL, fcntl.fcntl(0, fcntl.F_GETFL) & ~os.O_NONBLOCK)' 2>/dev/null || true
     read -p "Do you want to rebuild it? [y/N] " -r response
     if [[ ! "$response" =~ ^[Yy]$ ]]; then
       info "Skipping build."

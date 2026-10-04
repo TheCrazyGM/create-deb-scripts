@@ -68,6 +68,7 @@ DEB_FILE="${OUTDIR}/${PKGNAME}_${FULLVER}_${ARCH}.deb"
 if [[ -f "$DEB_FILE" ]]; then
   info "Package $(basename "$DEB_FILE") already exists."
   if [[ -t 0 ]]; then
+    python3 -c 'import fcntl, os; fcntl.fcntl(0, fcntl.F_SETFL, fcntl.fcntl(0, fcntl.F_GETFL) & ~os.O_NONBLOCK)' 2>/dev/null || true
     read -p "Do you want to rebuild it? [y/N] " -r response
     if [[ ! "$response" =~ ^[Yy]$ ]]; then
       info "Skipping build."

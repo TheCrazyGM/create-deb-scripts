@@ -38,7 +38,7 @@ done
 # - Otherwise, query ziglang.org API for the latest stable release.
 INDEX_JSON="${BUILD_TMP}/zig-index.json"
 info "Fetching ziglang.org release index..."
-curl -fsS https://ziglang.org/download/index.json -o "${INDEX_JSON}" \
+curl -fsS https://ziglang.org/download/index.json </dev/null -o "${INDEX_JSON}" \
   || die "Failed to fetch ziglang.org download index."
 
 if [ $# -ge 1 ]; then
@@ -79,6 +79,7 @@ DEB_FILE="${OUTDIR}/${DEB_NAME}"
 if [[ -f "$DEB_FILE" ]]; then
   info "Package $(basename "$DEB_FILE") already exists."
   if [[ -t 0 ]]; then
+    python3 -c 'import fcntl, os; fcntl.fcntl(0, fcntl.F_SETFL, fcntl.fcntl(0, fcntl.F_GETFL) & ~os.O_NONBLOCK)' 2>/dev/null || true
     read -p "Do you want to rebuild it? [y/N] " -r response
     if [[ ! "$response" =~ ^[Yy]$ ]]; then
       info "Skipping build."

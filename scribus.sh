@@ -40,7 +40,7 @@ fi
 
 info "Fetching latest release details from SourceForge RSS feed..."
 RSS_URL="https://sourceforge.net/projects/scribus/rss?path=/scribus-devel"
-APPIMAGE_URL=$(curl -s "$RSS_URL" \
+APPIMAGE_URL=$(curl -s "$RSS_URL" </dev/null \
   | grep -oP 'https://sourceforge.net/projects/scribus/files/scribus-devel/[^/]+/scribus-[0-9.]+-linux-x86_64\.AppImage/download' \
   | head -n 1)
 
@@ -57,6 +57,7 @@ DEB_FILE="${OUTDIR}/${DEB_NAME}"
 if [[ -f "$DEB_FILE" ]]; then
   info "Package $(basename "$DEB_FILE") already exists."
   if [[ -t 0 ]]; then
+    python3 -c 'import fcntl, os; fcntl.fcntl(0, fcntl.F_SETFL, fcntl.fcntl(0, fcntl.F_GETFL) & ~os.O_NONBLOCK)' 2>/dev/null || true
     read -p "Do you want to rebuild it? [y/N] " -r response
     if [[ ! "$response" =~ ^[Yy]$ ]]; then
       info "Skipping build."

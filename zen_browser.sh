@@ -46,7 +46,7 @@ esac
 
 # === FETCH LATEST RELEASE ===
 info "Fetching latest release from $REPO..."
-release_data=$(curl -s "$GH_API/repos/$REPO/releases/latest")
+release_data=$(curl -s "$GH_API/repos/$REPO/releases/latest" </dev/null)
 if [ -z "$release_data" ] || echo "$release_data" | jq -e '.message' >/dev/null; then
   die "Failed to fetch release data."
 fi
@@ -75,6 +75,7 @@ DEB_FILE="${OUTDIR}/${PACKAGE_NAME}_${DEB_VERSION}_${ARCH}.deb"
 if [[ -f "$DEB_FILE" ]]; then
   info "Package $(basename "$DEB_FILE") already exists."
   if [[ -t 0 ]]; then
+    python3 -c 'import fcntl, os; fcntl.fcntl(0, fcntl.F_SETFL, fcntl.fcntl(0, fcntl.F_GETFL) & ~os.O_NONBLOCK)' 2>/dev/null || true
     read -p "Do you want to rebuild it? [y/N] " -r response
     if [[ ! "$response" =~ ^[Yy]$ ]]; then
       info "Skipping build."
