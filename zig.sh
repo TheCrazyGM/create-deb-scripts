@@ -51,7 +51,7 @@ else
 fi
 
 if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  die "Invalid Zig version '${VERSION}' (expected e.g. 0.16.0)"
+  die "Invalid Zig version '${VERSION}' (expected e.g. 0.17.0)"
 fi
 
 ARCH=$(dpkg --print-architecture)
