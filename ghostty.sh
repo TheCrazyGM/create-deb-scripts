@@ -3,7 +3,7 @@ set -euo pipefail
 umask 0022
 
 # Simple standalone Debian package builder for Ghostty (git)
-# - Clones ghostty, installs Zig 0.17.0 if needed, builds, stages, and compiles a .deb
+# - Clones ghostty, installs Zig 0.17.1 if needed, builds, stages, and compiles a .deb
 
 die() {
   echo "[ERROR] $*" >&2
@@ -63,10 +63,16 @@ if [ ${#MISSING_DEPS[@]} -ne 0 ]; then
 fi
 
 # Detect or download correct Zig version
+REQUIRED_ZIG="0.17.1"
+zig_version_ok() {
+  local ver="$1"
+  [[ "$ver" == 0.17.* ]] && dpkg --compare-versions "$ver" ge "$REQUIRED_ZIG"
+}
+
 ZIG_CMD=""
 if command -v zig >/dev/null 2>&1; then
   ZIG_VER=$(zig version 2>/dev/null || echo "0.0.0")
-  if [[ "$ZIG_VER" == 0.17.* ]]; then
+  if zig_version_ok "$ZIG_VER"; then
     ZIG_CMD="zig"
   fi
 fi
@@ -75,8 +81,8 @@ if [[ -z "$ZIG_CMD" ]]; then
   for path in /usr/lib/zig/0.17.*/zig /usr/local/bin/zig /usr/bin/zig; do
     if [[ -x "$path" ]]; then
       VER=$("$path" version 2>/dev/null || echo "0.0.0")
-      if [[ "$VER" == 0.17.* ]]; then
-        info "Found local Zig 0.17.x at: $path"
+      if zig_version_ok "$VER"; then
+        info "Found local Zig ${VER} at: $path"
         ZIG_CMD="$path"
         break
       fi
@@ -88,13 +94,13 @@ if [[ -z "$ZIG_CMD" ]]; then
   case "$ARCH" in
     amd64) ZIG_ARCH="x86_64" ;;
     arm64) ZIG_ARCH="aarch64" ;;
-    *) die "No prebuilt Zig 0.17.0 toolchain available for architecture: $ARCH" ;;
+    *) die "No prebuilt Zig ${REQUIRED_ZIG} toolchain available for architecture: $ARCH" ;;
   esac
-  info "System zig is not 0.17.x and no local 0.17.x binary was found."
-  info "Downloading Zig 0.17.0 compiler for ${ZIG_ARCH}..."
-  wget -q "https://ziglang.org/download/0.17.0/zig-${ZIG_ARCH}-linux-0.17.0.tar.xz" -O "${BUILD_TMP}/zig.tar.xz"
+  info "System zig does not meet >= ${REQUIRED_ZIG} (0.17.x) and no matching local binary was found."
+  info "Downloading Zig ${REQUIRED_ZIG} compiler for ${ZIG_ARCH}..."
+  wget -q "https://ziglang.org/download/${REQUIRED_ZIG}/zig-${ZIG_ARCH}-linux-${REQUIRED_ZIG}.tar.xz" -O "${BUILD_TMP}/zig.tar.xz"
   tar -xf "${BUILD_TMP}/zig.tar.xz" -C "${BUILD_TMP}"
-  ZIG_CMD="${BUILD_TMP}/zig-${ZIG_ARCH}-linux-0.17.0/zig"
+  ZIG_CMD="${BUILD_TMP}/zig-${ZIG_ARCH}-linux-${REQUIRED_ZIG}/zig"
 fi
 
 git clone --depth=1 https://github.com/ghostty-org/ghostty.git "${BUILD_TMP}/ghostty"
